@@ -1,0 +1,13 @@
+{
+  "intersection_id": "I-001",
+  "phases": [
+    { "id": "M1_G", "duration_s": 45 },
+    { "id": "M1_Y", "duration_s": 3 },
+    { "id": "AR_1", "duration_s": 2 },
+    { "id": "M2_G", "duration_s": 30 },
+    { "id": "M2_Y", "duration_s": 3 },
+    { "id": "AR_2", "duration_s": 2 },
+    { "id": "PED_WALK", "duration_s": 14 },
+    { "id": "PED_CLEAR", "duration_s": 10 }
+  ]
+}
