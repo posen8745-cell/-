@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>T字路口｜主線直行+主線轉入支路+支路左右轉+行人可選斑馬線</title>
+  <title>T字路口｜主線1/主線2(4車道)＋尖峰交錯放行＋行人可選斑馬線</title>
   <style>
     :root{
       --bg:#0b1220;
@@ -27,7 +27,7 @@
       margin:0 auto;
       padding:18px;
       display:grid;
-      grid-template-columns: 1fr 420px;
+      grid-template-columns: 1fr 440px;
       gap:16px;
       align-items:start;
     }
@@ -41,7 +41,7 @@
     .canvasWrap{ padding:12px; }
     canvas{
       width:100%;
-      height:640px; /* ✅ 固定高度避免 0 */
+      height:650px;
       display:block;
       background: rgba(0,0,0,0.18);
       border-radius: 12px;
@@ -69,7 +69,7 @@
     .row{ display:flex; gap:10px; align-items:center; justify-content:space-between; margin:10px 0; }
     label{ font-size: 13px; color: var(--muted); }
     input[type="number"]{
-      width: 150px;
+      width: 160px;
       padding: 8px 10px;
       border-radius: 10px;
       border: 1px solid rgba(255,255,255,0.14);
@@ -129,65 +129,70 @@
     </div>
 
     <div class="card panel">
-      <h1>Ｔ字路口：主線直行 + 主線轉入支路（右來左轉 / 左來右轉） + 支路左右轉 + 行人可選斑馬線</h1>
+      <h1>Ｔ字路口：主線1（左右）＋主線2（下方 4 車道：左轉2、右轉2）＋尖峰交錯＋行人可選斑馬線</h1>
 
       <div class="pill">
         <span class="dot green" id="phaseDot"></span>
-        <span id="phaseText">Phase：主線直行綠</span>
+        <span id="phaseText">Phase：主線1 直行綠</span>
+      </div>
+
+      <div class="row">
+        <label>尖峰模式（主線2 同向2線交錯）</label>
+        <input type="checkbox" id="peak" checked />
       </div>
 
       <div class="divider"></div>
 
       <div class="row">
-        <label>主線直行綠秒（A_G）</label>
-        <input type="number" id="tAG" min="5" max="120" value="16" />
+        <label>主線1 直行綠秒（M1_G）</label>
+        <input type="number" id="tM1G" min="5" max="120" value="16" />
       </div>
       <div class="row">
-        <label>主線直行黃秒（A_Y）</label>
-        <input type="number" id="tAY" min="2" max="10" value="3" />
-      </div>
-
-      <div class="row">
-        <label>主線轉入支路綠（AT_G）</label>
-        <input type="number" id="tATG" min="5" max="120" value="8" />
-      </div>
-      <div class="row">
-        <label>主線轉入支路黃（AT_Y）</label>
-        <input type="number" id="tATY" min="2" max="10" value="2" />
+        <label>主線1 直行黃秒（M1_Y）</label>
+        <input type="number" id="tM1Y" min="2" max="10" value="3" />
       </div>
 
       <div class="row">
-        <label>支路左轉綠（BL_G）</label>
-        <input type="number" id="tBLG" min="5" max="120" value="8" />
+        <label>主線1 轉入主線2 綠（M1_T_G）</label>
+        <input type="number" id="tM1TG" min="5" max="120" value="8" />
       </div>
       <div class="row">
-        <label>支路左轉黃（BL_Y）</label>
-        <input type="number" id="tBLY" min="2" max="10" value="2" />
-      </div>
-
-      <div class="row">
-        <label>支路右轉綠（BR_G）</label>
-        <input type="number" id="tBRG" min="5" max="120" value="8" />
-      </div>
-      <div class="row">
-        <label>支路右轉黃（BR_Y）</label>
-        <input type="number" id="tBRY" min="2" max="10" value="2" />
+        <label>主線1 轉入主線2 黃（M1_T_Y）</label>
+        <input type="number" id="tM1TY" min="2" max="10" value="2" />
       </div>
 
       <div class="row">
-        <label>全紅緩衝秒（All-Red）</label>
-        <input type="number" id="tR" min="1" max="15" value="2" />
+        <label>主線2 左轉綠（M2_L_G）</label>
+        <input type="number" id="tM2LG" min="5" max="120" value="10" />
+      </div>
+      <div class="row">
+        <label>主線2 左轉黃（M2_L_Y）</label>
+        <input type="number" id="tM2LY" min="2" max="10" value="2" />
+      </div>
+
+      <div class="row">
+        <label>主線2 右轉綠（M2_R_G）</label>
+        <input type="number" id="tM2RG" min="5" max="120" value="10" />
+      </div>
+      <div class="row">
+        <label>主線2 右轉黃（M2_R_Y）</label>
+        <input type="number" id="tM2RY" min="2" max="10" value="2" />
+      </div>
+
+      <div class="row">
+        <label>全紅緩衝秒（AR）</label>
+        <input type="number" id="tAR" min="1" max="15" value="2" />
       </div>
 
       <div class="row">
         <label>車流生成率（0~1）</label>
-        <input type="number" id="spawn" min="0" max="1" step="0.05" value="0.55" />
+        <input type="number" id="spawn" min="0" max="1" step="0.05" value="0.60" />
       </div>
 
       <div class="subcard">
         <div class="tiny">
-          行人相位：你可勾選要放行的斑馬線，並設定每條 WALK/CLEAR 秒數。<br/>
-          本版策略：逐一放行（左→右→下），行人期間車輛全紅。
+          行人相位：勾選要放行的斑馬線，並設定每條 WALK/CLEAR 秒數。<br/>
+          策略：逐一放行（左→右→下），行人期間車輛全紅。
         </div>
 
         <div class="grid2">
@@ -224,16 +229,13 @@
 
       <div class="divider"></div>
 
-      <div class="kv"><div>主線直行</div><div class="mono" id="sigMain">GREEN</div></div>
-      <div class="kv"><div>主線轉入支路</div><div class="mono" id="sigMainTurn">RED</div></div>
-      <div class="kv"><div>支路左轉</div><div class="mono" id="sigBLeft">RED</div></div>
-      <div class="kv"><div>支路右轉</div><div class="mono" id="sigBRight">RED</div></div>
+      <div class="kv"><div>主線1 直行</div><div class="mono" id="sigM1">GREEN</div></div>
+      <div class="kv"><div>主線1 轉入主線2</div><div class="mono" id="sigM1T">RED</div></div>
+      <div class="kv"><div>主線2 左轉（2線）</div><div class="mono" id="sigM2L">RED</div></div>
+      <div class="kv"><div>主線2 右轉（2線）</div><div class="mono" id="sigM2R">RED</div></div>
+      <div class="kv"><div>尖峰放行車道（主線2）</div><div class="mono" id="laneInfo">ALL</div></div>
       <div class="kv"><div>行人</div><div class="mono" id="sigPed">STOP</div></div>
       <div class="kv"><div>本相位剩餘秒</div><div class="mono" id="count">--</div></div>
-
-      <div class="tiny">
-        相位流程：主線直行 → 全紅 → 主線轉入支路 → 全紅 → 支路左轉 → 全紅 → 支路右轉 → 全紅 → 行人序列（勾選者依序）→ 全紅 → 循環
-      </div>
     </div>
   </div>
 
@@ -241,18 +243,17 @@
 (() => {
   const canvas = document.getElementById('c');
   const ctx = canvas.getContext('2d');
-
   const $ = (id) => document.getElementById(id);
 
   const ui = {
-    tAG: $('tAG'), tAY: $('tAY'),
-    tATG: $('tATG'), tATY: $('tATY'),
-    tBLG: $('tBLG'), tBLY: $('tBLY'),
-    tBRG: $('tBRG'), tBRY: $('tBRY'),
-    tR: $('tR'),
+    peak: $('peak'),
+    tM1G: $('tM1G'), tM1Y: $('tM1Y'),
+    tM1TG: $('tM1TG'), tM1TY: $('tM1TY'),
+    tM2LG: $('tM2LG'), tM2LY: $('tM2LY'),
+    tM2RG: $('tM2RG'), tM2RY: $('tM2RY'),
+    tAR: $('tAR'),
     spawn: $('spawn'),
 
-    // ped config
     pLeftOn: $('pLeftOn'), pRightOn: $('pRightOn'), pBottomOn: $('pBottomOn'),
     pLeftWalk: $('pLeftWalk'), pLeftClr: $('pLeftClr'),
     pRightWalk: $('pRightWalk'), pRightClr: $('pRightClr'),
@@ -261,8 +262,9 @@
     toggle: $('toggle'), reset: $('reset'),
 
     phaseDot: $('phaseDot'), phaseText: $('phaseText'),
-    sigMain: $('sigMain'), sigMainTurn: $('sigMainTurn'),
-    sigBLeft: $('sigBLeft'), sigBRight: $('sigBRight'),
+    sigM1: $('sigM1'), sigM1T: $('sigM1T'),
+    sigM2L: $('sigM2L'), sigM2R: $('sigM2R'),
+    laneInfo: $('laneInfo'),
     sigPed: $('sigPed'), count: $('count'),
   };
 
@@ -283,16 +285,20 @@
     const rect = canvas.getBoundingClientRect();
     const W = rect.width, H = rect.height;
 
-    const road = { y: Math.round(H*0.38), h: 150, x: Math.round(W*0.52), w: 170 };
+    const road = { y: Math.round(H*0.38), h: 150, x: Math.round(W*0.52), w: 190 };
     const inter = { x0: road.x-road.w/2, x1: road.x+road.w/2, y0: road.y-road.h/2, y1: road.y+road.h/2 };
 
-    // lanes offsets (simple)
+    // 主線1（左右）
     const lane = {
-      mainEastY: road.y + 20, // left->right
-      mainWestY: road.y - 20, // right->left
-      stemDownX_R: road.x + 20, // turning into stem (right lane)
-      stemDownX_L: road.x - 20,
+      m1_east_y: road.y + 20,
+      m1_west_y: road.y - 20,
+
+      // ✅ 主線2（下方）4 車道：左轉2線 + 右轉2線
+      // 我用 x 位置分群：左轉兩線在左側、右轉兩線在右側
+      m2_left_x:  [road.x - 42, road.x - 18],  // L1, L2
+      m2_right_x: [road.x + 18, road.x + 42],  // R1, R2
     };
+
     return { W,H,road,inter,lane };
   }
 
@@ -303,15 +309,15 @@
 
   function getDur(){
     return {
-      AG: clampInt(ui.tAG.value, 5, 120),
-      AY: clampInt(ui.tAY.value, 2, 10),
-      ATG: clampInt(ui.tATG.value, 5, 120),
-      ATY: clampInt(ui.tATY.value, 2, 10),
-      BLG: clampInt(ui.tBLG.value, 5, 120),
-      BLY: clampInt(ui.tBLY.value, 2, 10),
-      BRG: clampInt(ui.tBRG.value, 5, 120),
-      BRY: clampInt(ui.tBRY.value, 2, 10),
-      R: clampInt(ui.tR.value, 1, 15),
+      M1G: clampInt(ui.tM1G.value, 5, 120),
+      M1Y: clampInt(ui.tM1Y.value, 2, 10),
+      M1TG: clampInt(ui.tM1TG.value, 5, 120),
+      M1TY: clampInt(ui.tM1TY.value, 2, 10),
+      M2LG: clampInt(ui.tM2LG.value, 5, 120),
+      M2LY: clampInt(ui.tM2LY.value, 2, 10),
+      M2RG: clampInt(ui.tM2RG.value, 5, 120),
+      M2RY: clampInt(ui.tM2RY.value, 2, 10),
+      AR: clampInt(ui.tAR.value, 1, 15),
     };
   }
 
@@ -337,93 +343,121 @@
 
   // Phases
   const PH = {
-    A_G:'A_G', A_Y:'A_Y', AR1:'AR1',
-    AT_G:'AT_G', AT_Y:'AT_Y', AR2:'AR2',
-    BL_G:'BL_G', BL_Y:'BL_Y', AR3:'AR3',
-    BR_G:'BR_G', BR_Y:'BR_Y', AR4:'AR4',
+    M1_G:'M1_G', M1_Y:'M1_Y', AR1:'AR1',
+    M1_T_G:'M1_T_G', M1_T_Y:'M1_T_Y', AR2:'AR2',
+    M2_L_G:'M2_L_G', M2_L_Y:'M2_L_Y', AR3:'AR3',
+    M2_R_G:'M2_R_G', M2_R_Y:'M2_R_Y', AR4:'AR4',
     PSEQ:'PSEQ', AR5:'AR5',
   };
 
-  let phase = PH.A_G;
+  let phase = PH.M1_G;
   let remaining = 0;
+
+  // ✅ 尖峰交錯控制：只對「當下放行的那個轉向群（左轉群或右轉群）」交錯
+  let m2ActiveLaneInGroup = -1;   // -1=ALL(離峰兩線同放), 0/1 = 群內第1/2線
+  let m2PhaseTotal = 0;
 
   function durationForPhase(ph){
     const d = getDur();
     switch(ph){
-      case PH.A_G: return d.AG;
-      case PH.A_Y: return d.AY;
-      case PH.AT_G: return d.ATG;
-      case PH.AT_Y: return d.ATY;
-      case PH.BL_G: return d.BLG;
-      case PH.BL_Y: return d.BLY;
-      case PH.BR_G: return d.BRG;
-      case PH.BR_Y: return d.BRY;
-      case PH.PSEQ: return (pedSteps[pedIndex]?.dur ?? d.R);
-      case PH.AR1:
-      case PH.AR2:
-      case PH.AR3:
-      case PH.AR4:
-      case PH.AR5:
-      default: return d.R;
+      case PH.M1_G: return d.M1G;
+      case PH.M1_Y: return d.M1Y;
+      case PH.M1_T_G: return d.M1TG;
+      case PH.M1_T_Y: return d.M1TY;
+      case PH.M2_L_G: return d.M2LG;
+      case PH.M2_L_Y: return d.M2LY;
+      case PH.M2_R_G: return d.M2RG;
+      case PH.M2_R_Y: return d.M2RY;
+      case PH.PSEQ: return (pedSteps[pedIndex]?.dur ?? d.AR);
+      default: return d.AR;
     }
   }
 
   function nextPhase(ph){
     switch(ph){
-      case PH.A_G: return PH.A_Y;
-      case PH.A_Y: return PH.AR1;
-      case PH.AR1: return PH.AT_G;
+      case PH.M1_G: return PH.M1_Y;
+      case PH.M1_Y: return PH.AR1;
+      case PH.AR1: return PH.M1_T_G;
 
-      case PH.AT_G: return PH.AT_Y;
-      case PH.AT_Y: return PH.AR2;
-      case PH.AR2: return PH.BL_G;
+      case PH.M1_T_G: return PH.M1_T_Y;
+      case PH.M1_T_Y: return PH.AR2;
+      case PH.AR2: return PH.M2_L_G;
 
-      case PH.BL_G: return PH.BL_Y;
-      case PH.BL_Y: return PH.AR3;
-      case PH.AR3: return PH.BR_G;
+      case PH.M2_L_G: return PH.M2_L_Y;
+      case PH.M2_L_Y: return PH.AR3;
+      case PH.AR3: return PH.M2_R_G;
 
-      case PH.BR_G: return PH.BR_Y;
-      case PH.BR_Y: return PH.AR4;
+      case PH.M2_R_G: return PH.M2_R_Y;
+      case PH.M2_R_Y: return PH.AR4;
       case PH.AR4: return PH.PSEQ;
 
       case PH.PSEQ: return PH.AR5;
-      default: return PH.A_G;
+      default: return PH.M1_G;
     }
   }
 
-  function enterPedSequence(){
-    pedSteps = buildPedSteps();
-    pedIndex = 0;
-    phase = PH.PSEQ;
-    remaining = pedSteps[pedIndex].dur;
+  function enterPhase(newPhase){
+    phase = newPhase;
+
+    if (phase === PH.PSEQ){
+      pedSteps = buildPedSteps();
+      pedIndex = 0;
+      remaining = pedSteps[pedIndex].dur;
+      m2ActiveLaneInGroup = -1;
+      m2PhaseTotal = 0;
+      return;
+    }
+
+    remaining = durationForPhase(phase);
+
+    if (phase === PH.M2_L_G || phase === PH.M2_R_G){
+      m2PhaseTotal = remaining;
+      m2ActiveLaneInGroup = ui.peak.checked ? 0 : -1;
+    } else {
+      m2ActiveLaneInGroup = -1;
+      m2PhaseTotal = 0;
+    }
+  }
+
+  function tick1s(){
+    remaining -= 1;
+
+    // ✅ 尖峰交錯：在 M2_*_G 前半放 lane0，後半放 lane1
+    if (ui.peak.checked && (phase === PH.M2_L_G || phase === PH.M2_R_G) && m2PhaseTotal > 0){
+      const elapsed = m2PhaseTotal - remaining;
+      const half = Math.floor(m2PhaseTotal / 2);
+      m2ActiveLaneInGroup = (elapsed <= half) ? 0 : 1;
+    } else if (!ui.peak.checked) {
+      if (phase === PH.M2_L_G || phase === PH.M2_R_G) m2ActiveLaneInGroup = -1;
+    }
+
+    if (remaining > 0) return;
+
+    if (phase === PH.PSEQ){
+      pedIndex += 1;
+      if (pedIndex < pedSteps.length){
+        remaining = pedSteps[pedIndex].dur;
+        return;
+      }
+      enterPhase(PH.AR5);
+      return;
+    }
+
+    const nxt = nextPhase(phase);
+    if (nxt === PH.PSEQ){
+      pedSteps = buildPedSteps();
+      pedIndex = 0;
+      enterPhase(PH.PSEQ);
+      return;
+    }
+    enterPhase(nxt);
   }
 
   function signals(){
-    // main straight: A_G/A_Y
-    // main turn into stem: AT_G/AT_Y
-    // bottom: BL/BR
-    // ped: per step
     const all = {
-      main: SIG.RED,
-      mainTurn: SIG.RED,
-      bLeft: SIG.RED,
-      bRight: SIG.RED,
-      pedLeft: 'STOP',
-      pedRight: 'STOP',
-      pedBottom: 'STOP',
+      m1: SIG.RED, m1t: SIG.RED, m2l: SIG.RED, m2r: SIG.RED,
+      pedLeft: 'STOP', pedRight: 'STOP', pedBottom: 'STOP',
     };
-
-    if (phase === PH.A_G) return { ...all, main: SIG.GREEN };
-    if (phase === PH.A_Y) return { ...all, main: SIG.YELLOW };
-
-    if (phase === PH.AT_G) return { ...all, mainTurn: SIG.GREEN };
-    if (phase === PH.AT_Y) return { ...all, mainTurn: SIG.YELLOW };
-
-    if (phase === PH.BL_G) return { ...all, bLeft: SIG.GREEN };
-    if (phase === PH.BL_Y) return { ...all, bLeft: SIG.YELLOW };
-
-    if (phase === PH.BR_G) return { ...all, bRight: SIG.GREEN };
-    if (phase === PH.BR_Y) return { ...all, bRight: SIG.YELLOW };
 
     if (phase === PH.PSEQ){
       const step = pedSteps[pedIndex] || { key:'NONE_CLR' };
@@ -434,7 +468,19 @@
       return s;
     }
 
-    return all; // all-red buffers
+    if (phase === PH.M1_G) return { ...all, m1: SIG.GREEN };
+    if (phase === PH.M1_Y) return { ...all, m1: SIG.YELLOW };
+
+    if (phase === PH.M1_T_G) return { ...all, m1t: SIG.GREEN };
+    if (phase === PH.M1_T_Y) return { ...all, m1t: SIG.YELLOW };
+
+    if (phase === PH.M2_L_G) return { ...all, m2l: SIG.GREEN };
+    if (phase === PH.M2_L_Y) return { ...all, m2l: SIG.YELLOW };
+
+    if (phase === PH.M2_R_G) return { ...all, m2r: SIG.GREEN };
+    if (phase === PH.M2_R_Y) return { ...all, m2r: SIG.YELLOW };
+
+    return all;
   }
 
   // Cars
@@ -442,10 +488,10 @@
   const CAR_W = 22, CAR_H = 14;
   function rnd(a,b){ return a + Math.random()*(b-a); }
 
-  // car kinds:
-  // L: from left -> straight or turnDown (right turn into stem)
-  // R: from right -> straight or turnDown (left turn into stem)
-  // S: from stem(bottom) -> toLeft or toRight
+  // kinds:
+  // M1L: 左來主線1（直行 or 轉入主線2）
+  // M1R: 右來主線1（直行 or 轉入主線2）
+  // M2: 下方主線2（左轉 or 右轉），並且有 groupLane 0/1（同向兩線）
   function spawnCar(g){
     const p = Number(ui.spawn.value);
     if (Math.random() > p) return;
@@ -454,83 +500,70 @@
     const speed = rnd(90, 135);
 
     if (r < 0.40){
-      // from left
       const route = (Math.random() < 0.25) ? 'turnDown' : 'straight';
-      cars.push({
-        kind:'L', route,
-        x:-50, y:g.lane.mainEastY,
-        vx:speed, vy:0,
-        w:CAR_W, h:CAR_H,
-        turned:false
-      });
+      cars.push({ kind:'M1L', route, x:-60, y:g.lane.m1_east_y, vx:speed, vy:0, w:CAR_W, h:CAR_H, turned:false });
     } else if (r < 0.80){
-      // from right
       const route = (Math.random() < 0.25) ? 'turnDown' : 'straight';
-      cars.push({
-        kind:'R', route,
-        x:g.W+50, y:g.lane.mainWestY,
-        vx:-speed, vy:0,
-        w:CAR_W, h:CAR_H,
-        turned:false
-      });
+      cars.push({ kind:'M1R', route, x:g.W+60, y:g.lane.m1_west_y, vx:-speed, vy:0, w:CAR_W, h:CAR_H, turned:false });
     } else {
-      // from stem bottom
       const route = (Math.random() < 0.5) ? 'toLeft' : 'toRight';
-      cars.push({
-        kind:'S', route,
-        x:g.road.x + 20, y:g.H+50,
-        vx:0, vy:-speed,
-        w:CAR_H, h:CAR_W,
-        turned:false
-      });
+      const groupLane = (Math.random() < 0.5) ? 0 : 1; // ✅ 同向兩線：0/1
+
+      const x = (route === 'toLeft')
+        ? g.lane.m2_left_x[groupLane]
+        : g.lane.m2_right_x[groupLane];
+
+      cars.push({ kind:'M2', route, groupLane, x, y:g.H+70, vx:0, vy:-speed, w:CAR_H, h:CAR_W, turned:false });
     }
   }
 
   function stopLine(car, g){
     const m = 22;
-    if (car.kind === 'L') return g.inter.x0 - m;
-    if (car.kind === 'R') return g.inter.x1 + m;
+    if (car.kind === 'M1L') return g.inter.x0 - m;
+    if (car.kind === 'M1R') return g.inter.x1 + m;
     return g.inter.y1 + m;
   }
 
   function pastStop(car, g){
     const s = stopLine(car, g);
-    if (car.kind === 'L') return car.x > s;
-    if (car.kind === 'R') return car.x < s;
+    if (car.kind === 'M1L') return car.x > s;
+    if (car.kind === 'M1R') return car.x < s;
     return car.y < s;
   }
 
   function approachingStop(car, g){
     const s = stopLine(car, g);
-    if (car.kind === 'L') return car.x + car.w/2 >= s - 2;
-    if (car.kind === 'R') return car.x - car.w/2 <= s + 2;
+    if (car.kind === 'M1L') return car.x + car.w/2 >= s - 2;
+    if (car.kind === 'M1R') return car.x - car.w/2 <= s + 2;
     return car.y - car.h/2 <= s + 2;
   }
 
   function allowed(car, sig, g){
-    // Any ped step => vehicles all red
     if (phase === PH.PSEQ) return false;
 
-    // Main approaches:
-    if (car.kind === 'L' || car.kind === 'R'){
+    // 主線1
+    if (car.kind === 'M1L' || car.kind === 'M1R'){
       if (car.route === 'straight'){
-        if (sig.main === SIG.GREEN) return true;
-        if (sig.main === SIG.YELLOW) return pastStop(car, g);
+        if (sig.m1 === SIG.GREEN) return true;
+        if (sig.m1 === SIG.YELLOW) return pastStop(car, g);
         return false;
       } else {
-        // turnDown uses mainTurn signal
-        if (sig.mainTurn === SIG.GREEN) return true;
-        if (sig.mainTurn === SIG.YELLOW) return pastStop(car, g);
+        if (sig.m1t === SIG.GREEN) return true;
+        if (sig.m1t === SIG.YELLOW) return pastStop(car, g);
         return false;
       }
     }
 
-    // Stem approach:
-    if (car.kind === 'S'){
-      const arrow = (car.route === 'toLeft') ? sig.bLeft : sig.bRight;
-      if (arrow === SIG.GREEN) return true;
-      if (arrow === SIG.YELLOW) return pastStop(car, g);
-      return false;
+    // 主線2（下方）— 左轉群 / 右轉群 各 2 線
+    if (car.kind === 'M2'){
+      const need = (car.route === 'toLeft') ? sig.m2l : sig.m2r;
+      if (need === SIG.RED) return false;
+      if (need === SIG.YELLOW) return pastStop(car, g);
+
+      // GREEN
+      if (!ui.peak.checked) return true; // 離峰：同向兩線同放
+      if (m2ActiveLaneInGroup === -1) return true;
+      return car.groupLane === m2ActiveLaneInGroup; // 尖峰：同向兩線交錯
     }
 
     return false;
@@ -539,28 +572,26 @@
   function updateCars(dt, sig, g){
     for (const car of cars){
       const needStop = approachingStop(car, g) && !pastStop(car, g) && !allowed(car, sig, g);
-
       if (!needStop){
         car.x += car.vx * dt;
         car.y += car.vy * dt;
       }
 
-      // Turning logic at intersection center
       if (!car.turned){
-        // Main turning into stem
-        if ((car.kind === 'L' || car.kind === 'R') && car.route === 'turnDown'){
-          const turnX = g.road.x; // turning point near center
-          if ((car.kind==='L' && car.x >= turnX) || (car.kind==='R' && car.x <= turnX)){
+        // 主線1 轉入主線2：把車導向「中間」(不細分成4線，避免太亂)
+        if ((car.kind === 'M1L' || car.kind === 'M1R') && car.route === 'turnDown'){
+          const turnX = g.road.x;
+          if ((car.kind==='M1L' && car.x >= turnX) || (car.kind==='M1R' && car.x <= turnX)){
             car.turned = true;
             const sp = Math.abs(car.vx);
-            car.vx = 0; car.vy = sp; // go downward
-            car.x = (car.kind==='L') ? g.lane.stemDownX_R : g.lane.stemDownX_L;
+            car.vx = 0; car.vy = sp;
+            car.x = g.road.x; // 中間下行
             car.w = CAR_H; car.h = CAR_W;
           }
         }
 
-        // Stem turning into main
-        if (car.kind === 'S'){
+        // 主線2 轉入主線1
+        if (car.kind === 'M2'){
           if (car.y <= g.road.y + 10){
             car.turned = true;
             const sp = Math.abs(car.vy);
@@ -568,24 +599,23 @@
             car.w = CAR_W; car.h = CAR_H;
             if (car.route === 'toLeft'){
               car.vx = -sp;
-              car.y = g.lane.mainWestY; // westbound lane
+              car.y = g.lane.m1_west_y;
             } else {
               car.vx = sp;
-              car.y = g.lane.mainEastY; // eastbound lane
+              car.y = g.lane.m1_east_y;
             }
           }
         }
       }
     }
 
-    // cleanup
     for (let i=cars.length-1; i>=0; i--){
       const c = cars[i];
-      if (c.x < -200 || c.x > g.W+200 || c.y < -200 || c.y > g.H+200) cars.splice(i,1);
+      if (c.x < -240 || c.x > g.W+240 || c.y < -240 || c.y > g.H+240) cars.splice(i,1);
     }
   }
 
-  // Drawing
+  // Drawing helpers
   function roundRect(x,y,w,h,r){
     ctx.beginPath();
     ctx.moveTo(x+r, y);
@@ -629,22 +659,24 @@
     ctx.strokeRect(0, g.road.y-g.road.h/2, g.W, g.road.h);
     ctx.strokeRect(g.road.x-g.road.w/2, g.road.y, g.road.w, g.H-g.road.y);
 
-    // Zebras: left, right, bottom
     zebra(g.inter.x0 - 55, g.road.y-g.road.h/2 + 8, 42, g.road.h-16, 'vertical');
     zebra(g.inter.x1 + 13, g.road.y-g.road.h/2 + 8, 42, g.road.h-16, 'vertical');
     zebra(g.road.x-g.road.w/2 + 8, g.inter.y1 + 14, g.road.w-16, 42, 'horizontal');
 
-    // Stop lines
+    // stop lines
     ctx.strokeStyle='rgba(255,255,255,0.60)'; ctx.lineWidth=4;
     ctx.beginPath(); ctx.moveTo(g.inter.x0-20, g.road.y+g.road.h/2-6); ctx.lineTo(g.inter.x0-20, g.road.y+6); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(g.inter.x1+20, g.road.y-g.road.h/2+6); ctx.lineTo(g.inter.x1+20, g.road.y-6); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(g.road.x-g.road.w/2+6, g.inter.y1+20); ctx.lineTo(g.road.x+g.road.w/2-6, g.inter.y1+20); ctx.stroke();
 
-    ctx.fillStyle='rgba(232,238,252,0.75)';
-    ctx.font='12px ui-monospace, Menlo, Consolas, monospace';
-    ctx.fillText('左→ (直/右轉下支路)', 18, g.road.y + 60);
-    ctx.fillText('(直/左轉下支路) ←右', g.W-220, g.road.y - 50);
-    ctx.fillText('下方來車（左/右轉上主線）', g.road.x - 120, g.H-18);
+    // 主線2 四車道輔助線（畫在下方）
+    ctx.strokeStyle='rgba(255,255,255,0.18)'; ctx.lineWidth=2;
+    for (const x of [...g.lane.m2_left_x, ...g.lane.m2_right_x]){
+      ctx.beginPath();
+      ctx.moveTo(x, g.road.y+10);
+      ctx.lineTo(x, g.H);
+      ctx.stroke();
+    }
   }
 
   function lamp(onCol, on){ return on ? onCol : 'rgba(255,255,255,0.12)'; }
@@ -652,11 +684,10 @@
   function draw3Lamp(x,y,state){
     ctx.save(); ctx.translate(x,y);
     ctx.fillStyle='rgba(0,0,0,0.45)'; roundRect(-14,-26,28,52,8); ctx.fill();
-
     const lamps=[
-      {cy:-14,on:state===SIG.RED,col:'rgba(255,70,70,1)'},
-      {cy:  0,on:state===SIG.YELLOW,col:'rgba(255,210,60,1)'},
-      {cy: 14,on:state===SIG.GREEN,col:'rgba(60,255,140,1)'},
+      {cy:-14,on:state==='RED',col:'rgba(255,70,70,1)'},
+      {cy:  0,on:state==='YELLOW',col:'rgba(255,210,60,1)'},
+      {cy: 14,on:state==='GREEN',col:'rgba(60,255,140,1)'},
     ];
     for(const l of lamps){
       ctx.beginPath(); ctx.arc(0,l.cy,7,0,Math.PI*2);
@@ -668,10 +699,9 @@
   function drawTurnLamp(x,y,state,glyph){
     ctx.save(); ctx.translate(x,y);
     ctx.beginPath(); ctx.arc(0,0,8,0,Math.PI*2);
-    const col = state===SIG.GREEN ? 'rgba(60,255,140,1)' : (state===SIG.YELLOW ? 'rgba(255,210,60,1)' : 'rgba(255,255,255,0.12)');
+    const col = state==='GREEN' ? 'rgba(60,255,140,1)' : (state==='YELLOW' ? 'rgba(255,210,60,1)' : 'rgba(255,255,255,0.12)');
     ctx.fillStyle=col; ctx.fill();
-
-    if (state !== SIG.RED){
+    if (state !== 'RED'){
       ctx.fillStyle='rgba(0,0,0,0.55)';
       ctx.font='12px ui-monospace, Menlo, Consolas, monospace';
       ctx.textAlign='center'; ctx.textBaseline='middle';
@@ -702,28 +732,37 @@
   }
 
   function drawSignals(sig, g){
-    // Main straight heads
-    draw3Lamp(g.inter.x0-34, g.road.y+g.road.h/2-30, sig.main);
-    draw3Lamp(g.inter.x1+34, g.road.y-g.road.h/2+30, sig.main);
+    // 主線1
+    draw3Lamp(g.inter.x0-34, g.road.y+g.road.h/2-30, sig.m1);
+    draw3Lamp(g.inter.x1+34, g.road.y-g.road.h/2+30, sig.m1);
 
-    // Main-to-stem turn lamps (simple indicators)
-    // Left approach right turn into stem: show ↘
-    drawTurnLamp(g.road.x-60, g.road.y+8, sig.mainTurn, '↘');
-    // Right approach left turn into stem: show ↙
-    drawTurnLamp(g.road.x+60, g.road.y-8, sig.mainTurn, '↙');
+    // 主線1 轉入主線2
+    drawTurnLamp(g.road.x-60, g.road.y+8, sig.m1t, '↘');
+    drawTurnLamp(g.road.x+60, g.road.y-8, sig.m1t, '↙');
 
-    // Stem arrows (bottom)
-    // left arrow = toLeft, right arrow = toRight
-    drawTurnLamp(g.road.x-18, g.inter.y1+60, sig.bLeft, '←');
-    drawTurnLamp(g.road.x+18, g.inter.y1+60, sig.bRight, '→');
+    // 主線2 左/右
+    drawTurnLamp(g.road.x-18, g.inter.y1+60, sig.m2l, '←');
+    drawTurnLamp(g.road.x+18, g.inter.y1+60, sig.m2r, '→');
 
-    // Countdown
+    // 倒數
     drawCountdown(g.road.x - 34, g.road.y - 60, remaining);
 
-    // Ped heads (per-crosswalk state)
+    // 行人
     drawPedHead(g.inter.x0 - 65, g.road.y - 70, sig.pedLeft);
     drawPedHead(g.inter.x1 + 65, g.road.y + 70, sig.pedRight);
     drawPedHead(g.road.x - 95, g.inter.y1 + 70, sig.pedBottom);
+
+    // 尖峰 active lane 提示（只提示當下群內 lane）
+    if (ui.peak.checked && (phase === PH.M2_L_G || phase === PH.M2_R_G)){
+      const isLeft = (phase === PH.M2_L_G);
+      const x = isLeft ? g.lane.m2_left_x[m2ActiveLaneInGroup] : g.lane.m2_right_x[m2ActiveLaneInGroup];
+      ctx.save();
+      ctx.fillStyle='rgba(255,255,255,0.85)';
+      ctx.font='12px ui-monospace, Menlo, Consolas, monospace';
+      const tag = isLeft ? `L${m2ActiveLaneInGroup+1}` : `R${m2ActiveLaneInGroup+1}`;
+      ctx.fillText(`ACTIVE ${tag}`, x-34, g.road.y+120);
+      ctx.restore();
+    }
   }
 
   function drawCars(){
@@ -731,7 +770,6 @@
       ctx.save();
       ctx.translate(car.x, car.y);
 
-      // rotate based on motion
       if (Math.abs(car.vx) > Math.abs(car.vy)){
         if (car.vx < 0) ctx.rotate(Math.PI);
       } else {
@@ -739,7 +777,16 @@
         else if (car.vy > 0) ctx.rotate(Math.PI/2);
       }
 
-      ctx.fillStyle='rgba(120,200,255,0.95)';
+      // 用不同色系區分主線2 左/右群 & lane
+      if (car.kind === 'M2'){
+        if (car.route === 'toLeft'){
+          ctx.fillStyle = (car.groupLane === 0) ? 'rgba(120,200,255,0.95)' : 'rgba(100,240,200,0.95)';
+        } else {
+          ctx.fillStyle = (car.groupLane === 0) ? 'rgba(170,160,255,0.95)' : 'rgba(230,190,255,0.95)';
+        }
+      } else {
+        ctx.fillStyle = 'rgba(120,200,255,0.95)';
+      }
       ctx.fillRect(-car.w/2, -car.h/2, car.w, car.h);
 
       ctx.fillStyle='rgba(0,0,0,0.35)';
@@ -758,15 +805,15 @@
       return [`行人序列：${k}`, 'green'];
     }
     switch(phase){
-      case PH.A_G: return ['主線直行綠（A_G）','green'];
-      case PH.A_Y: return ['主線直行黃（A_Y）','yellow'];
-      case PH.AT_G: return ['主線轉入支路綠（AT_G）','green'];
-      case PH.AT_Y: return ['主線轉入支路黃（AT_Y）','yellow'];
-      case PH.BL_G: return ['支路左轉綠（BL_G）','green'];
-      case PH.BL_Y: return ['支路左轉黃（BL_Y）','yellow'];
-      case PH.BR_G: return ['支路右轉綠（BR_G）','green'];
-      case PH.BR_Y: return ['支路右轉黃（BR_Y）','yellow'];
-      default: return ['全紅緩衝（All-Red）','red'];
+      case PH.M1_G: return ['主線1 直行綠（M1_G）','green'];
+      case PH.M1_Y: return ['主線1 直行黃（M1_Y）','yellow'];
+      case PH.M1_T_G: return ['主線1 轉入主線2 綠（M1_T_G）','green'];
+      case PH.M1_T_Y: return ['主線1 轉入主線2 黃（M1_T_Y）','yellow'];
+      case PH.M2_L_G: return ['主線2 左轉綠（M2_L_G）','green'];
+      case PH.M2_L_Y: return ['主線2 左轉黃（M2_L_Y）','yellow'];
+      case PH.M2_R_G: return ['主線2 右轉綠（M2_R_G）','green'];
+      case PH.M2_R_Y: return ['主線2 右轉黃（M2_R_Y）','yellow'];
+      default: return ['全紅緩衝（AR）','red'];
     }
   }
 
@@ -775,61 +822,48 @@
     ui.phaseText.textContent = 'Phase：' + txt;
     ui.phaseDot.className = 'dot ' + color;
 
-    ui.sigMain.textContent = sig.main;
-    ui.sigMainTurn.textContent = sig.mainTurn;
-    ui.sigBLeft.textContent = sig.bLeft;
-    ui.sigBRight.textContent = sig.bRight;
+    ui.sigM1.textContent = sig.m1;
+    ui.sigM1T.textContent = sig.m1t;
+    ui.sigM2L.textContent = sig.m2l;
+    ui.sigM2R.textContent = sig.m2r;
+
+    if (!ui.peak.checked) ui.laneInfo.textContent = '離峰：同向2線同放';
+    else if (phase === PH.M2_L_G) ui.laneInfo.textContent = `尖峰：左轉放 L${m2ActiveLaneInGroup+1}`;
+    else if (phase === PH.M2_R_G) ui.laneInfo.textContent = `尖峰：右轉放 R${m2ActiveLaneInGroup+1}`;
+    else ui.laneInfo.textContent = '—';
+
     ui.sigPed.textContent = `L:${sig.pedLeft} R:${sig.pedRight} B:${sig.pedBottom}`;
     ui.count.textContent = remaining;
   }
 
-  // Loop
+  // Controls / Loop
   let running = true;
   let acc = 0;
   let last = performance.now();
 
-  function tick1s(){
-    remaining -= 1;
-    if (remaining > 0) return;
-
-    // special transitions
-    if (phase === PH.AR4){
-      // enter ped sequence
-      enterPedSequence();
-      return;
-    }
-
-    if (phase === PH.PSEQ){
-      pedIndex += 1;
-      if (pedIndex < pedSteps.length){
-        remaining = pedSteps[pedIndex].dur;
-        return;
-      }
-      phase = PH.AR5;
-      remaining = durationForPhase(phase);
-      return;
-    }
-
-    phase = nextPhase(phase);
-    remaining = durationForPhase(phase);
-  }
-
   function softApply(){
-    // keep remaining within current phase duration
     if (phase === PH.PSEQ){
       const cur = pedSteps[pedIndex]?.dur ?? remaining;
       remaining = Math.min(remaining, cur);
     } else {
       remaining = Math.min(remaining, durationForPhase(phase));
     }
+
+    if (!ui.peak.checked) {
+      if (phase === PH.M2_L_G || phase === PH.M2_R_G) m2ActiveLaneInGroup = -1;
+    } else {
+      if (phase === PH.M2_L_G || phase === PH.M2_R_G){
+        if (m2PhaseTotal <= 0) m2PhaseTotal = remaining;
+        m2ActiveLaneInGroup = 0;
+      }
+    }
   }
 
   for (const el of [
-    ui.tAG,ui.tAY,ui.tATG,ui.tATY,ui.tBLG,ui.tBLY,ui.tBRG,ui.tBRY,ui.tR,
+    ui.peak,
+    ui.tM1G,ui.tM1Y,ui.tM1TG,ui.tM1TY,ui.tM2LG,ui.tM2LY,ui.tM2RG,ui.tM2RY,ui.tAR,
     ui.pLeftOn,ui.pRightOn,ui.pBottomOn,ui.pLeftWalk,ui.pLeftClr,ui.pRightWalk,ui.pRightClr,ui.pBottomWalk,ui.pBottomClr
-  ]){
-    el.addEventListener('change', softApply);
-  }
+  ]) el.addEventListener('change', softApply);
 
   ui.toggle.addEventListener('click', () => {
     running = !running;
@@ -838,10 +872,9 @@
 
   ui.reset.addEventListener('click', () => {
     cars.length = 0;
-    pedSteps = buildPedSteps();
-    pedIndex = 0;
-    phase = PH.A_G;
-    remaining = durationForPhase(phase);
+    pedSteps = buildPedSteps(); pedIndex = 0;
+    m2ActiveLaneInGroup = -1; m2PhaseTotal = 0;
+    enterPhase(PH.M1_G);
   });
 
   function step(now){
@@ -867,12 +900,10 @@
     requestAnimationFrame(step);
   }
 
-  // start
   pedSteps = buildPedSteps();
-  phase = PH.A_G;
-  remaining = durationForPhase(phase);
+  pedIndex = 0;
+  enterPhase(PH.M1_G);
   requestAnimationFrame(step);
-
   window.addEventListener('resize', () => resizeCanvasToCSS());
 })();
 </script>
