@@ -148,11 +148,10 @@
     <div class="card panel">
       <h1>
         ✅ 混放型最終模型（Cycle 約 120 秒）<br/>
-        主線1：右來車「直行＋左轉」同時；左來車「直行＋右轉」同時。<br/>
+        主線1：改為「保護式右來左轉(往下)」＋「主線1混放(禁止右來左轉)」→ 不相撞。<br/>
         主線2：左右轉同時（兩車道：左轉專用＋右轉專用，但同相位同時放）。<br/>
         行人：可勾選斑馬線，且每條保證 <b>WALK + CLEAR ≥ 20 秒</b>（預設 24 秒）。<br/>
-        行人 CLEAR：允許「不衝突車流」低速通行（較像實際）。<br/>
-        ※ 修正：主線1「右側左轉(往下)」出現時，暫停主線1左側進入路口（避免衝突）。
+        行人 CLEAR：允許「不衝突車流」低速通行（較像實際）。
       </h1>
 
       <div class="pill">
@@ -340,7 +339,7 @@
       y: Math.round(H*0.38),
       h: 150,
       x: Math.round(W*0.52),
-      w: 240, // vertical stem width (4 lanes)
+      w: 240,
     };
     const inter = {
       x0: road.x-road.w/2,
@@ -391,15 +390,24 @@
     return steps;
   }
 
-  // Phases (mixed flow)
+  // Phases (protected + permissive)
   const PH = {
-    M1_G:'M1_G', M1_Y:'M1_Y', AR1:'AR1',
+    M1P_G:'M1P_G', // ✅ protected: only right-side left-turn (to down)
+    M1_G:'M1_G',
+    M1_Y:'M1_Y',
+    AR1:'AR1',
+
     M2_G:'M2_G', M2_Y:'M2_Y', AR2:'AR2',
     PSEQ:'PSEQ', AR3:'AR3',
   };
 
-  let phase = PH.M1_G;
+  let phase = PH.M1P_G;
   let remaining = 0;
+
+  // M1 protected green bounds (fixed, not in UI for now)
+  const M1P_MIN = 4;
+  const M1P_MAX = 12;
+  let m1pElapsed = 0;
 
   function durationForPhase(ph){
     const d = getDur();
@@ -415,29 +423,96 @@
 
   function nextPhase(ph){
     switch(ph){
-      case PH.M1_G: return PH.M1_Y;
-      case PH.M1_Y: return PH.AR1;
-      case PH.AR1: return PH.M2_G;
-      case PH.M2_G: return PH.M2_Y;
-      case PH.M2_Y: return PH.AR2;
-      case PH.AR2: return PH.PSEQ;
-      case PH.PSEQ: return PH.AR3;
-      default: return PH.M1_G;
+      case PH.M1P_G: return PH.M1_G;
+      case PH.M1_G:  return PH.M1_Y;
+      case PH.M1_Y:  return PH.AR1;
+      case PH.AR1:   return PH.M2_G;
+
+      case PH.M2_G:  return PH.M2_Y;
+      case PH.M2_Y:  return PH.AR2;
+      case PH.AR2:   return PH.PSEQ;
+
+      case PH.PSEQ:  return PH.AR3;
+      default:       return PH.M1P_G;
     }
+  }
+
+  // Cars
+  const cars = [];
+  const CAR_W = 22, CAR_H = 14;
+
+  function rnd(a,b){ return a + Math.random()*(b-a); }
+
+  function stopLine(car, g){
+    if (car.kind === 'M1L') return g.stop.m1_left;
+    if (car.kind === 'M1R') return g.stop.m1_right;
+    return g.stop.m2_in;
+  }
+
+  function pastStop(car, g){
+    const s = stopLine(car, g);
+    if (car.kind === 'M1L') return car.x > s;
+    if (car.kind === 'M1R') return car.x < s;
+    return car.y < s;
+  }
+
+  function approachingStop(car, g){
+    const s = stopLine(car, g);
+    if (car.kind === 'M1L') return car.x + car.w/2 >= s - 2;
+    if (car.kind === 'M1R') return car.x - car.w/2 <= s + 2;
+    return car.y - car.h/2 <= s + 2;
+  }
+
+  // right-side left turn existence (to down)
+  function hasAnyM1RLeftTurn(){
+    for (const car of cars){
+      if (car.kind !== 'M1R') continue;
+      if (car.route !== 'down') continue;
+      if (car.turned) continue; // turned=true => already shifted to down stream (conflict cleared)
+      return true;
+    }
+    return false;
   }
 
   function enterPhase(newPhase){
     phase = newPhase;
+
+    if (phase === PH.M1P_G){
+      // no demand => skip
+      if (!hasAnyM1RLeftTurn()){
+        enterPhase(PH.M1_G);
+        return;
+      }
+      m1pElapsed = 0;
+      remaining = M1P_MAX;
+      return;
+    }
+
     if (phase === PH.PSEQ){
       pedSteps = buildPedSteps();
       pedIndex = 0;
       remaining = pedSteps[pedIndex].dur;
       return;
     }
+
     remaining = durationForPhase(phase);
   }
 
   function tick1s(){
+    // M1 protected: early-end if cleared after min time
+    if (phase === PH.M1P_G){
+      m1pElapsed += 1;
+      remaining -= 1;
+
+      if (m1pElapsed >= M1P_MIN && !hasAnyM1RLeftTurn()){
+        remaining = 0;
+      }
+      if (remaining > 0) return;
+
+      enterPhase(nextPhase(phase));
+      return;
+    }
+
     remaining -= 1;
     if (remaining > 0) return;
 
@@ -461,11 +536,13 @@
     enterPhase(nxt);
   }
 
+  // Active ped step helper
   function activePedStep(){
     if (phase !== PH.PSEQ) return null;
     return pedSteps[pedIndex] || { key:'NONE_CLEAR', dur: 0 };
   }
 
+  // Signals
   function signals(){
     const all = {
       m1: SIG.RED,
@@ -499,104 +576,14 @@
       return s;
     }
 
-    if (phase === PH.M1_G) return { ...all, m1: SIG.GREEN };
-    if (phase === PH.M1_Y) return { ...all, m1: SIG.YELLOW };
+    if (phase === PH.M1P_G) return { ...all, m1: SIG.GREEN };
+    if (phase === PH.M1_G)  return { ...all, m1: SIG.GREEN };
+    if (phase === PH.M1_Y)  return { ...all, m1: SIG.YELLOW };
 
-    if (phase === PH.M2_G) return { ...all, m2: SIG.GREEN };
-    if (phase === PH.M2_Y) return { ...all, m2: SIG.YELLOW };
+    if (phase === PH.M2_G)  return { ...all, m2: SIG.GREEN };
+    if (phase === PH.M2_Y)  return { ...all, m2: SIG.YELLOW };
 
     return all;
-  }
-
-  // Cars
-  const cars = [];
-  const CAR_W = 22, CAR_H = 14;
-
-  function rnd(a,b){ return a + Math.random()*(b-a); }
-
-  function spawnCar(g){
-    const p = Number(ui.spawn.value);
-    if (Math.random() > p) return;
-
-    const r = Math.random();
-    const sp = rnd(95, 145);
-
-    if (r < 0.42){
-      const turnDown = (Math.random() < 0.30);
-      cars.push({
-        kind:'M1L',
-        route: turnDown ? 'down' : 'straight',
-        x: -80,
-        y: g.lane.m1_east_y,
-        vx: sp,
-        vy: 0,
-        w: CAR_W,
-        h: CAR_H,
-        turned: false,
-        outLane: (Math.random() < 0.5 ? 0 : 1),
-      });
-    } else if (r < 0.84){
-      const turnDown = (Math.random() < 0.55);
-      cars.push({
-        kind:'M1R',
-        route: turnDown ? 'down' : 'straight',
-        x: g.W + 80,
-        y: g.lane.m1_west_y,
-        vx: -sp,
-        vy: 0,
-        w: CAR_W,
-        h: CAR_H,
-        turned: false,
-        outLane: (Math.random() < 0.5 ? 0 : 1),
-      });
-    } else {
-      const laneIdx = (Math.random() < 0.58) ? 1 : 0;
-      const route = (laneIdx === 0) ? 'toLeft' : 'toRight';
-      cars.push({
-        kind:'M2',
-        laneIdx,
-        route,
-        x: g.lane.stem_in_x[laneIdx],
-        y: g.H + 90,
-        vx: 0,
-        vy: -sp,
-        w: CAR_H,
-        h: CAR_W,
-        turned: false,
-      });
-    }
-  }
-
-  function stopLine(car, g){
-    if (car.kind === 'M1L') return g.stop.m1_left;
-    if (car.kind === 'M1R') return g.stop.m1_right;
-    return g.stop.m2_in;
-  }
-
-  function pastStop(car, g){
-    const s = stopLine(car, g);
-    if (car.kind === 'M1L') return car.x > s;
-    if (car.kind === 'M1R') return car.x < s;
-    return car.y < s;
-  }
-
-  function approachingStop(car, g){
-    const s = stopLine(car, g);
-    if (car.kind === 'M1L') return car.x + car.w/2 >= s - 2;
-    if (car.kind === 'M1R') return car.x - car.w/2 <= s + 2;
-    return car.y - car.h/2 <= s + 2;
-  }
-
-  // ✅ NEW: right-side M1 left-turn demand (M1R route down)
-  function hasM1RLeftTurnDemand(g){
-    for (const car of cars){
-      if (car.kind !== 'M1R') continue;
-      if (car.route !== 'down') continue;    // right-side left-turn (to down)
-      if (car.turned) continue;
-      if (pastStop(car, g)) continue;        // already entered intersection -> let clear
-      if (approachingStop(car, g)) return true;
-    }
-    return false;
   }
 
   // Ped conflict model
@@ -615,29 +602,101 @@
     return true;
   }
 
+  // Spawn cars
+  function spawnCar(g){
+    const p = Number(ui.spawn.value);
+    if (Math.random() > p) return;
+
+    const r = Math.random();
+    const sp = rnd(95, 145);
+
+    if (r < 0.42){
+      // left -> right : straight or right-turn down
+      const turnDown = (Math.random() < 0.30);
+      cars.push({
+        kind:'M1L',
+        route: turnDown ? 'down' : 'straight',
+        x: -80,
+        y: g.lane.m1_east_y,
+        vx: sp,
+        vy: 0,
+        w: CAR_W,
+        h: CAR_H,
+        turned: false,
+        outLane: (Math.random() < 0.5 ? 0 : 1),
+      });
+    } else if (r < 0.84){
+      // right -> left : straight or left-turn down (highest)
+      const turnDown = (Math.random() < 0.55);
+      cars.push({
+        kind:'M1R',
+        route: turnDown ? 'down' : 'straight',
+        x: g.W + 80,
+        y: g.lane.m1_west_y,
+        vx: -sp,
+        vy: 0,
+        w: CAR_W,
+        h: CAR_H,
+        turned: false,
+        outLane: (Math.random() < 0.5 ? 0 : 1),
+      });
+    } else {
+      // M2 incoming: lane0 left-only, lane1 right-only
+      const laneIdx = (Math.random() < 0.58) ? 1 : 0;
+      const route = (laneIdx === 0) ? 'toLeft' : 'toRight';
+      cars.push({
+        kind:'M2',
+        laneIdx,
+        route,
+        x: g.lane.stem_in_x[laneIdx],
+        y: g.H + 90,
+        vx: 0,
+        vy: -sp,
+        w: CAR_H,
+        h: CAR_W,
+        turned: false,
+      });
+    }
+  }
+
+  // ✅ 핵심：movement permission (no crash)
   function allowedBySignal(car, sig, g){
     if (phase === PH.PSEQ){
       return pedAllowsCar(car, sig);
     }
 
-    // ===== M1 logic (fixed conflict) =====
+    // ===== M1 Protected phase: ONLY right-side left-turn (to down). Right straight is NOT allowed. =====
+    if (phase === PH.M1P_G){
+      if (car.kind === 'M1L' || car.kind === 'M1R'){
+        // allow clearing if already entered intersection
+        if (pastStop(car, g)) return true;
+
+        // ONLY allow M1R down left-turn
+        if (car.kind === 'M1R' && car.route === 'down') return true;
+
+        return false;
+      }
+    }
+
+    // ===== M1 Mixed phase: both directions allowed, BUT forbid M1R down left-turn (must wait protected phase) =====
     if (car.kind === 'M1L' || car.kind === 'M1R'){
       if (sig.m1 === SIG.GREEN){
-        // ✅ If right-side left-turn demand exists, stop left-side M1 (M1L) to avoid conflict
-        const protect = hasM1RLeftTurnDemand(g);
-        if (protect){
-          if (car.kind === 'M1L') return false; // left side must stop
-          return true;                          // allow right side to proceed (including down left-turn)
+        if (car.kind === 'M1R' && car.route === 'down' && !car.turned && !pastStop(car, g)){
+          return false;
         }
-        return true; // normal mixed flow
+        return true;
       }
       if (sig.m1 === SIG.YELLOW) return pastStop(car, g);
       return false;
     }
 
-    // ===== M2 logic =====
-    if (sig.m2 === SIG.GREEN) return true;
-    if (sig.m2 === SIG.YELLOW) return pastStop(car, g);
+    // ===== M2 =====
+    if (car.kind === 'M2'){
+      if (sig.m2 === SIG.GREEN) return true;
+      if (sig.m2 === SIG.YELLOW) return pastStop(car, g);
+      return false;
+    }
+
     return false;
   }
 
@@ -652,18 +711,21 @@
         car.y += car.vy * dt * slowFactor;
       }
 
+      // Turning behavior
       if (!car.turned){
+        // M1 turn down into stem OUT lanes
         if ((car.kind === 'M1L' || car.kind === 'M1R') && car.route === 'down'){
           const turnX = g.road.x;
           if ((car.kind==='M1L' && car.x >= turnX) || (car.kind==='M1R' && car.x <= turnX)){
             car.turned = true;
             const sp = Math.abs(car.vx);
-            car.vx = 0; car.vy = sp;
+            car.vx = 0; car.vy = sp; // down
             car.x = g.lane.stem_out_x[car.outLane];
             car.w = CAR_H; car.h = CAR_W;
           }
         }
 
+        // M2 turn into mainline
         if (car.kind === 'M2'){
           if (car.y <= g.road.y + 10){
             car.turned = true;
@@ -683,6 +745,7 @@
       }
     }
 
+    // cleanup
     for (let i=cars.length-1; i>=0; i--){
       const c = cars[i];
       if (c.x < -320 || c.x > g.W+320 || c.y < -320 || c.y > g.H+320) cars.splice(i,1);
@@ -721,19 +784,23 @@
   function drawRoad(g){
     ctx.clearRect(0,0,g.W,g.H);
 
+    // asphalt
     ctx.fillStyle = 'rgba(255,255,255,0.03)';
     ctx.fillRect(0, g.road.y-g.road.h/2, g.W, g.road.h);
     ctx.fillRect(g.road.x-g.road.w/2, g.road.y, g.road.w, g.H-g.road.y);
 
+    // lane lines
     ctx.strokeStyle='rgba(255,255,255,0.16)'; ctx.lineWidth=2;
     dashed(0, g.road.y, g.W, g.road.y);
 
+    // vertical stem divider
     ctx.strokeStyle='rgba(255,255,255,0.13)'; ctx.lineWidth=2;
     ctx.beginPath();
     ctx.moveTo(g.road.x, g.road.y);
     ctx.lineTo(g.road.x, g.H);
     ctx.stroke();
 
+    // inner lane separators
     for (const x of [g.lane.stem_out_x[1], g.lane.stem_in_x[0]]){
       ctx.beginPath();
       ctx.moveTo(x, g.road.y+8);
@@ -741,15 +808,17 @@
       ctx.stroke();
     }
 
+    // edges
     ctx.strokeStyle='rgba(255,255,255,0.10)'; ctx.lineWidth=3;
     ctx.strokeRect(0, g.road.y-g.road.h/2, g.W, g.road.h);
     ctx.strokeRect(g.road.x-g.road.w/2, g.road.y, g.road.w, g.H-g.road.y);
 
-    // zebra crossings (still drawn; your checkbox affects pedestrian phase, not paint)
+    // zebra crossings (paint only; movement controlled by checkboxes)
     zebra(g.xwalk.left.x, g.xwalk.left.y, g.xwalk.left.w, g.xwalk.left.h, 'vertical');
     zebra(g.xwalk.right.x, g.xwalk.right.y, g.xwalk.right.w, g.xwalk.right.h, 'vertical');
     zebra(g.xwalk.bottom.x, g.xwalk.bottom.y, g.xwalk.bottom.w, g.xwalk.bottom.h, 'horizontal');
 
+    // stop lines
     ctx.strokeStyle='rgba(255,255,255,0.60)'; ctx.lineWidth=4;
 
     ctx.beginPath();
@@ -767,6 +836,7 @@
     ctx.lineTo(g.road.x+g.road.w/2-6, g.stop.m2_in);
     ctx.stroke();
 
+    // labels
     ctx.fillStyle = 'rgba(232,238,252,0.78)';
     ctx.font = '12px ui-monospace, Menlo, Consolas, monospace';
     ctx.fillText('主線1（左來）直行/右轉(往下)', 14, g.road.y + 60);
@@ -852,6 +922,7 @@
       ctx.save();
       ctx.translate(car.x, car.y);
 
+      // orient by velocity
       if (Math.abs(car.vx) > Math.abs(car.vy)){
         if (car.vx < 0) ctx.rotate(Math.PI);
       } else {
@@ -859,6 +930,7 @@
         else if (car.vy > 0) ctx.rotate(Math.PI/2);
       }
 
+      // color
       if (car.kind === 'M2') ctx.fillStyle = 'rgba(170,160,255,0.95)';
       else if (car.route === 'down') ctx.fillStyle = 'rgba(100,240,200,0.95)';
       else ctx.fillStyle = 'rgba(120,200,255,0.95)';
@@ -877,16 +949,15 @@
 
   function phaseLabel(sig){
     if (phase === PH.PSEQ){
-      const which = sig.pedWhich;
-      const mode = sig.pedMode;
-      return [`行人：${which} ${mode}`, mode==='WALK' ? 'green' : 'yellow'];
+      return [`行人：${sig.pedWhich} ${sig.pedMode}`, sig.pedMode==='WALK' ? 'green' : 'yellow'];
     }
     switch(phase){
-      case PH.M1_G: return ['主線1 混放綠（右側左轉會暫停左側）','green'];
-      case PH.M1_Y: return ['主線1 黃','yellow'];
-      case PH.M2_G: return ['主線2 混放綠（左右轉同時）','green'];
-      case PH.M2_Y: return ['主線2 黃','yellow'];
-      default: return ['全紅（AR）','red'];
+      case PH.M1P_G: return ['主線1 保護期（只放右來左轉往下）','green'];
+      case PH.M1_G:  return ['主線1 混放綠（禁止右來左轉）','green'];
+      case PH.M1_Y:  return ['主線1 黃','yellow'];
+      case PH.M2_G:  return ['主線2 混放綠（左右轉同時）','green'];
+      case PH.M2_Y:  return ['主線2 黃','yellow'];
+      default:       return ['全紅（AR）','red'];
     }
   }
 
@@ -911,9 +982,13 @@
       pedSteps = buildPedSteps();
       pedIndex = Math.min(pedIndex, Math.max(0, pedSteps.length-1));
       remaining = Math.min(remaining, pedSteps[pedIndex]?.dur ?? remaining);
-    } else {
-      remaining = Math.min(remaining, durationForPhase(phase));
+      return;
     }
+    if (phase === PH.M1P_G){
+      remaining = Math.min(remaining, M1P_MAX);
+      return;
+    }
+    remaining = Math.min(remaining, durationForPhase(phase));
   }
 
   function applyConfigAndNormalize(cfg){
@@ -935,7 +1010,7 @@
   ui.reset.addEventListener('click', () => {
     cars.length = 0;
     pedSteps = buildPedSteps(); pedIndex = 0;
-    enterPhase(PH.M1_G);
+    enterPhase(PH.M1P_G);
   });
 
   function step(now){
@@ -972,7 +1047,7 @@
 
     pedSteps = buildPedSteps();
     pedIndex = 0;
-    enterPhase(PH.M1_G);
+    enterPhase(PH.M1P_G);
     requestAnimationFrame(step);
     window.addEventListener('resize', () => resizeCanvasToCSS());
   })();
