@@ -3,12 +3,14 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>T字路口｜主線1/主線2(4車道)＋尖峰交錯放行＋行人可選斑馬線</title>
+  <title>T字路口｜最終正確模型（主線1直行/轉入主線2＋主線2進口左右轉＋可選行人斑馬線）</title>
   <style>
     :root{
       --bg:#0b1220;
+      --panel:#121a2b;
       --text:#e8eefc;
       --muted:#a9b6d6;
+      --line:#2a3553;
       --good:#3cff7a;
       --bad:#ff3b3b;
       --warn:#ffd43b;
@@ -69,7 +71,7 @@
     .row{ display:flex; gap:10px; align-items:center; justify-content:space-between; margin:10px 0; }
     label{ font-size: 13px; color: var(--muted); }
     input[type="number"]{
-      width: 160px;
+      width: 170px;
       padding: 8px 10px;
       border-radius: 10px;
       border: 1px solid rgba(255,255,255,0.14);
@@ -129,32 +131,30 @@
     </div>
 
     <div class="card panel">
-      <h1>Ｔ字路口：主線1（左右）＋主線2（下方 4 車道：左轉2、右轉2）＋尖峰交錯＋行人可選斑馬線</h1>
+      <h1>
+        最終正確模型：<br/>
+        主線1（左右）直行 + 主線1 轉入主線2（出口段：左側2車道往下） + 主線2 進口（右側2車道往上）左右轉進主線1 + 行人可選斑馬線
+      </h1>
 
       <div class="pill">
         <span class="dot green" id="phaseDot"></span>
         <span id="phaseText">Phase：主線1 直行綠</span>
       </div>
 
-      <div class="row">
-        <label>尖峰模式（主線2 同向2線交錯）</label>
-        <input type="checkbox" id="peak" checked />
-      </div>
-
       <div class="divider"></div>
 
       <div class="row">
-        <label>主線1 直行綠秒（M1_G）</label>
-        <input type="number" id="tM1G" min="5" max="120" value="16" />
+        <label>主線1 直行綠（M1_G）</label>
+        <input type="number" id="tM1G" min="5" max="120" value="30" />
       </div>
       <div class="row">
-        <label>主線1 直行黃秒（M1_Y）</label>
+        <label>主線1 直行黃（M1_Y）</label>
         <input type="number" id="tM1Y" min="2" max="10" value="3" />
       </div>
 
       <div class="row">
         <label>主線1 轉入主線2 綠（M1_T_G）</label>
-        <input type="number" id="tM1TG" min="5" max="120" value="8" />
+        <input type="number" id="tM1TG" min="3" max="60" value="8" />
       </div>
       <div class="row">
         <label>主線1 轉入主線2 黃（M1_T_Y）</label>
@@ -162,25 +162,25 @@
       </div>
 
       <div class="row">
-        <label>主線2 左轉綠（M2_L_G）</label>
-        <input type="number" id="tM2LG" min="5" max="120" value="10" />
+        <label>主線2 進口左轉綠（S_L_G）</label>
+        <input type="number" id="tSLG" min="3" max="60" value="10" />
       </div>
       <div class="row">
-        <label>主線2 左轉黃（M2_L_Y）</label>
-        <input type="number" id="tM2LY" min="2" max="10" value="2" />
-      </div>
-
-      <div class="row">
-        <label>主線2 右轉綠（M2_R_G）</label>
-        <input type="number" id="tM2RG" min="5" max="120" value="10" />
-      </div>
-      <div class="row">
-        <label>主線2 右轉黃（M2_R_Y）</label>
-        <input type="number" id="tM2RY" min="2" max="10" value="2" />
+        <label>主線2 進口左轉黃（S_L_Y）</label>
+        <input type="number" id="tSLY" min="2" max="10" value="2" />
       </div>
 
       <div class="row">
-        <label>全紅緩衝秒（AR）</label>
+        <label>主線2 進口右轉綠（S_R_G）</label>
+        <input type="number" id="tSRG" min="3" max="60" value="10" />
+      </div>
+      <div class="row">
+        <label>主線2 進口右轉黃（S_R_Y）</label>
+        <input type="number" id="tSRY" min="2" max="10" value="2" />
+      </div>
+
+      <div class="row">
+        <label>全紅緩衝（AR）</label>
         <input type="number" id="tAR" min="1" max="15" value="2" />
       </div>
 
@@ -231,9 +231,8 @@
 
       <div class="kv"><div>主線1 直行</div><div class="mono" id="sigM1">GREEN</div></div>
       <div class="kv"><div>主線1 轉入主線2</div><div class="mono" id="sigM1T">RED</div></div>
-      <div class="kv"><div>主線2 左轉（2線）</div><div class="mono" id="sigM2L">RED</div></div>
-      <div class="kv"><div>主線2 右轉（2線）</div><div class="mono" id="sigM2R">RED</div></div>
-      <div class="kv"><div>尖峰放行車道（主線2）</div><div class="mono" id="laneInfo">ALL</div></div>
+      <div class="kv"><div>主線2 進口左轉</div><div class="mono" id="sigSL">RED</div></div>
+      <div class="kv"><div>主線2 進口右轉</div><div class="mono" id="sigSR">RED</div></div>
       <div class="kv"><div>行人</div><div class="mono" id="sigPed">STOP</div></div>
       <div class="kv"><div>本相位剩餘秒</div><div class="mono" id="count">--</div></div>
     </div>
@@ -246,11 +245,10 @@
   const $ = (id) => document.getElementById(id);
 
   const ui = {
-    peak: $('peak'),
     tM1G: $('tM1G'), tM1Y: $('tM1Y'),
     tM1TG: $('tM1TG'), tM1TY: $('tM1TY'),
-    tM2LG: $('tM2LG'), tM2LY: $('tM2LY'),
-    tM2RG: $('tM2RG'), tM2RY: $('tM2RY'),
+    tSLG: $('tSLG'), tSLY: $('tSLY'),
+    tSRG: $('tSRG'), tSRY: $('tSRY'),
     tAR: $('tAR'),
     spawn: $('spawn'),
 
@@ -263,8 +261,7 @@
 
     phaseDot: $('phaseDot'), phaseText: $('phaseText'),
     sigM1: $('sigM1'), sigM1T: $('sigM1T'),
-    sigM2L: $('sigM2L'), sigM2R: $('sigM2R'),
-    laneInfo: $('laneInfo'),
+    sigSL: $('sigSL'), sigSR: $('sigSR'),
     sigPed: $('sigPed'), count: $('count'),
   };
 
@@ -285,18 +282,30 @@
     const rect = canvas.getBoundingClientRect();
     const W = rect.width, H = rect.height;
 
-    const road = { y: Math.round(H*0.38), h: 150, x: Math.round(W*0.52), w: 190 };
-    const inter = { x0: road.x-road.w/2, x1: road.x+road.w/2, y0: road.y-road.h/2, y1: road.y+road.h/2 };
+    const road = {
+      y: Math.round(H*0.38),
+      h: 150,
+      x: Math.round(W*0.52),
+      w: 240, // vertical stem width (4 lanes)
+    };
+    const inter = {
+      x0: road.x-road.w/2,
+      x1: road.x+road.w/2,
+      y0: road.y-road.h/2,
+      y1: road.y+road.h/2,
+    };
 
-    // 主線1（左右）
+    // lanes:
+    // mainline1: eastbound (L->R) at +22, westbound (R->L) at -22
+    // stem: LEFT side 2 lanes are OUTGOING (down, leaving intersection)
+    //       RIGHT side 2 lanes are INCOMING (up, approaching intersection)
     const lane = {
-      m1_east_y: road.y + 20,
-      m1_west_y: road.y - 20,
+      m1_east_y: road.y + 22,
+      m1_west_y: road.y - 22,
 
-      // ✅ 主線2（下方）4 車道：左轉2線 + 右轉2線
-      // 我用 x 位置分群：左轉兩線在左側、右轉兩線在右側
-      m2_left_x:  [road.x - 42, road.x - 18],  // L1, L2
-      m2_right_x: [road.x + 18, road.x + 42],  // R1, R2
+      // stem x positions
+      stem_out_x: [road.x - 48, road.x - 20],   // left side 2 lanes (downward, EXIT)
+      stem_in_x:  [road.x + 20, road.x + 48],   // right side 2 lanes (upward, APPROACH)
     };
 
     return { W,H,road,inter,lane };
@@ -311,12 +320,12 @@
     return {
       M1G: clampInt(ui.tM1G.value, 5, 120),
       M1Y: clampInt(ui.tM1Y.value, 2, 10),
-      M1TG: clampInt(ui.tM1TG.value, 5, 120),
+      M1TG: clampInt(ui.tM1TG.value, 3, 60),
       M1TY: clampInt(ui.tM1TY.value, 2, 10),
-      M2LG: clampInt(ui.tM2LG.value, 5, 120),
-      M2LY: clampInt(ui.tM2LY.value, 2, 10),
-      M2RG: clampInt(ui.tM2RG.value, 5, 120),
-      M2RY: clampInt(ui.tM2RY.value, 2, 10),
+      SLG: clampInt(ui.tSLG.value, 3, 60),
+      SLY: clampInt(ui.tSLY.value, 2, 10),
+      SRG: clampInt(ui.tSRG.value, 3, 60),
+      SRY: clampInt(ui.tSRY.value, 2, 10),
       AR: clampInt(ui.tAR.value, 1, 15),
     };
   }
@@ -324,7 +333,6 @@
   // Ped steps
   let pedSteps = [];
   let pedIndex = 0;
-
   function buildPedSteps(){
     const steps = [];
     const add = (name, on, walkEl, clrEl) => {
@@ -341,21 +349,17 @@
     return steps;
   }
 
-  // Phases
+  // Phases (final correct model)
   const PH = {
     M1_G:'M1_G', M1_Y:'M1_Y', AR1:'AR1',
     M1_T_G:'M1_T_G', M1_T_Y:'M1_T_Y', AR2:'AR2',
-    M2_L_G:'M2_L_G', M2_L_Y:'M2_L_Y', AR3:'AR3',
-    M2_R_G:'M2_R_G', M2_R_Y:'M2_R_Y', AR4:'AR4',
+    S_L_G:'S_L_G', S_L_Y:'S_L_Y', AR3:'AR3',
+    S_R_G:'S_R_G', S_R_Y:'S_R_Y', AR4:'AR4',
     PSEQ:'PSEQ', AR5:'AR5',
   };
 
   let phase = PH.M1_G;
   let remaining = 0;
-
-  // ✅ 尖峰交錯控制：只對「當下放行的那個轉向群（左轉群或右轉群）」交錯
-  let m2ActiveLaneInGroup = -1;   // -1=ALL(離峰兩線同放), 0/1 = 群內第1/2線
-  let m2PhaseTotal = 0;
 
   function durationForPhase(ph){
     const d = getDur();
@@ -364,10 +368,10 @@
       case PH.M1_Y: return d.M1Y;
       case PH.M1_T_G: return d.M1TG;
       case PH.M1_T_Y: return d.M1TY;
-      case PH.M2_L_G: return d.M2LG;
-      case PH.M2_L_Y: return d.M2LY;
-      case PH.M2_R_G: return d.M2RG;
-      case PH.M2_R_Y: return d.M2RY;
+      case PH.S_L_G: return d.SLG;
+      case PH.S_L_Y: return d.SLY;
+      case PH.S_R_G: return d.SRG;
+      case PH.S_R_Y: return d.SRY;
       case PH.PSEQ: return (pedSteps[pedIndex]?.dur ?? d.AR);
       default: return d.AR;
     }
@@ -381,14 +385,14 @@
 
       case PH.M1_T_G: return PH.M1_T_Y;
       case PH.M1_T_Y: return PH.AR2;
-      case PH.AR2: return PH.M2_L_G;
+      case PH.AR2: return PH.S_L_G;
 
-      case PH.M2_L_G: return PH.M2_L_Y;
-      case PH.M2_L_Y: return PH.AR3;
-      case PH.AR3: return PH.M2_R_G;
+      case PH.S_L_G: return PH.S_L_Y;
+      case PH.S_L_Y: return PH.AR3;
+      case PH.AR3: return PH.S_R_G;
 
-      case PH.M2_R_G: return PH.M2_R_Y;
-      case PH.M2_R_Y: return PH.AR4;
+      case PH.S_R_G: return PH.S_R_Y;
+      case PH.S_R_Y: return PH.AR4;
       case PH.AR4: return PH.PSEQ;
 
       case PH.PSEQ: return PH.AR5;
@@ -403,34 +407,14 @@
       pedSteps = buildPedSteps();
       pedIndex = 0;
       remaining = pedSteps[pedIndex].dur;
-      m2ActiveLaneInGroup = -1;
-      m2PhaseTotal = 0;
       return;
     }
 
     remaining = durationForPhase(phase);
-
-    if (phase === PH.M2_L_G || phase === PH.M2_R_G){
-      m2PhaseTotal = remaining;
-      m2ActiveLaneInGroup = ui.peak.checked ? 0 : -1;
-    } else {
-      m2ActiveLaneInGroup = -1;
-      m2PhaseTotal = 0;
-    }
   }
 
   function tick1s(){
     remaining -= 1;
-
-    // ✅ 尖峰交錯：在 M2_*_G 前半放 lane0，後半放 lane1
-    if (ui.peak.checked && (phase === PH.M2_L_G || phase === PH.M2_R_G) && m2PhaseTotal > 0){
-      const elapsed = m2PhaseTotal - remaining;
-      const half = Math.floor(m2PhaseTotal / 2);
-      m2ActiveLaneInGroup = (elapsed <= half) ? 0 : 1;
-    } else if (!ui.peak.checked) {
-      if (phase === PH.M2_L_G || phase === PH.M2_R_G) m2ActiveLaneInGroup = -1;
-    }
-
     if (remaining > 0) return;
 
     if (phase === PH.PSEQ){
@@ -455,10 +439,16 @@
 
   function signals(){
     const all = {
-      m1: SIG.RED, m1t: SIG.RED, m2l: SIG.RED, m2r: SIG.RED,
-      pedLeft: 'STOP', pedRight: 'STOP', pedBottom: 'STOP',
+      m1: SIG.RED,       // 主線1直行
+      m1t: SIG.RED,      // 主線1轉入主線2
+      sl: SIG.RED,       // 主線2進口左轉
+      sr: SIG.RED,       // 主線2進口右轉
+      pedLeft: 'STOP',
+      pedRight: 'STOP',
+      pedBottom: 'STOP',
     };
 
+    // pedestrian sequence (all vehicles red)
     if (phase === PH.PSEQ){
       const step = pedSteps[pedIndex] || { key:'NONE_CLR' };
       const s = { ...all };
@@ -474,11 +464,11 @@
     if (phase === PH.M1_T_G) return { ...all, m1t: SIG.GREEN };
     if (phase === PH.M1_T_Y) return { ...all, m1t: SIG.YELLOW };
 
-    if (phase === PH.M2_L_G) return { ...all, m2l: SIG.GREEN };
-    if (phase === PH.M2_L_Y) return { ...all, m2l: SIG.YELLOW };
+    if (phase === PH.S_L_G) return { ...all, sl: SIG.GREEN };
+    if (phase === PH.S_L_Y) return { ...all, sl: SIG.YELLOW };
 
-    if (phase === PH.M2_R_G) return { ...all, m2r: SIG.GREEN };
-    if (phase === PH.M2_R_Y) return { ...all, m2r: SIG.YELLOW };
+    if (phase === PH.S_R_G) return { ...all, sr: SIG.GREEN };
+    if (phase === PH.S_R_Y) return { ...all, sr: SIG.YELLOW };
 
     return all;
   }
@@ -489,9 +479,12 @@
   function rnd(a,b){ return a + Math.random()*(b-a); }
 
   // kinds:
-  // M1L: 左來主線1（直行 or 轉入主線2）
-  // M1R: 右來主線1（直行 or 轉入主線2）
-  // M2: 下方主線2（左轉 or 右轉），並且有 groupLane 0/1（同向兩線）
+  // M1L: 左來主線1（直行 or 轉下）
+  // M1R: 右來主線1（直行 or 轉下）
+  // STEM: 主線2進口（右側2車道，往上接近路口），最後左轉/右轉進主線1
+  //
+  // Note:
+  // 主線2 左側2車道是「出口段」：只有 M1 的轉下車會進去（往下離開），不需要號誌放行
   function spawnCar(g){
     const p = Number(ui.spawn.value);
     if (Math.random() > p) return;
@@ -499,28 +492,35 @@
     const r = Math.random();
     const speed = rnd(90, 135);
 
-    if (r < 0.40){
-      const route = (Math.random() < 0.25) ? 'turnDown' : 'straight';
-      cars.push({ kind:'M1L', route, x:-60, y:g.lane.m1_east_y, vx:speed, vy:0, w:CAR_W, h:CAR_H, turned:false });
-    } else if (r < 0.80){
-      const route = (Math.random() < 0.25) ? 'turnDown' : 'straight';
-      cars.push({ kind:'M1R', route, x:g.W+60, y:g.lane.m1_west_y, vx:-speed, vy:0, w:CAR_W, h:CAR_H, turned:false });
+    // 調整比例：主線1占大多數，主線2進口也會有
+    if (r < 0.42){
+      // left -> right
+      const route = (Math.random() < 0.28) ? 'down' : 'straight';
+      cars.push({ kind:'M1L', route, x:-70, y:g.lane.m1_east_y, vx:speed, vy:0, w:CAR_W, h:CAR_H, turned:false, outLane: (Math.random()<0.5?0:1) });
+    } else if (r < 0.84){
+      // right -> left
+      const route = (Math.random() < 0.28) ? 'down' : 'straight';
+      cars.push({ kind:'M1R', route, x:g.W+70, y:g.lane.m1_west_y, vx:-speed, vy:0, w:CAR_W, h:CAR_H, turned:false, outLane: (Math.random()<0.5?0:1) });
     } else {
-      const route = (Math.random() < 0.5) ? 'toLeft' : 'toRight';
-      const groupLane = (Math.random() < 0.5) ? 0 : 1; // ✅ 同向兩線：0/1
-
-      const x = (route === 'toLeft')
-        ? g.lane.m2_left_x[groupLane]
-        : g.lane.m2_right_x[groupLane];
-
-      cars.push({ kind:'M2', route, groupLane, x, y:g.H+70, vx:0, vy:-speed, w:CAR_H, h:CAR_W, turned:false });
+      // stem incoming (right side 2 lanes, upward)
+      const laneIdx = (Math.random() < 0.5) ? 0 : 1;
+      const route = (Math.random() < 0.5) ? 'toLeft' : 'toRight'; // into mainline1
+      cars.push({
+        kind:'STEM', laneIdx, route,
+        x:g.lane.stem_in_x[laneIdx], y:g.H+80,
+        vx:0, vy:-speed,
+        w:CAR_H, h:CAR_W,
+        turned:false
+      });
     }
   }
 
+  // stop lines (where vehicles must stop if not allowed)
   function stopLine(car, g){
     const m = 22;
     if (car.kind === 'M1L') return g.inter.x0 - m;
     if (car.kind === 'M1R') return g.inter.x1 + m;
+    // STEM approach stop line at bottom of intersection
     return g.inter.y1 + m;
   }
 
@@ -539,31 +539,28 @@
   }
 
   function allowed(car, sig, g){
+    // Ped phase holds everything (already all red)
     if (phase === PH.PSEQ) return false;
 
-    // 主線1
     if (car.kind === 'M1L' || car.kind === 'M1R'){
       if (car.route === 'straight'){
         if (sig.m1 === SIG.GREEN) return true;
         if (sig.m1 === SIG.YELLOW) return pastStop(car, g);
         return false;
       } else {
+        // turning down into stem OUT lanes
         if (sig.m1t === SIG.GREEN) return true;
         if (sig.m1t === SIG.YELLOW) return pastStop(car, g);
         return false;
       }
     }
 
-    // 主線2（下方）— 左轉群 / 右轉群 各 2 線
-    if (car.kind === 'M2'){
-      const need = (car.route === 'toLeft') ? sig.m2l : sig.m2r;
-      if (need === SIG.RED) return false;
-      if (need === SIG.YELLOW) return pastStop(car, g);
-
-      // GREEN
-      if (!ui.peak.checked) return true; // 離峰：同向兩線同放
-      if (m2ActiveLaneInGroup === -1) return true;
-      return car.groupLane === m2ActiveLaneInGroup; // 尖峰：同向兩線交錯
+    // STEM incoming: route determines which signal
+    if (car.kind === 'STEM'){
+      const s = (car.route === 'toLeft') ? sig.sl : sig.sr;
+      if (s === SIG.GREEN) return true;
+      if (s === SIG.YELLOW) return pastStop(car, g);
+      return false;
     }
 
     return false;
@@ -577,30 +574,34 @@
         car.y += car.vy * dt;
       }
 
+      // Turning behaviors
       if (!car.turned){
-        // 主線1 轉入主線2：把車導向「中間」(不細分成4線，避免太亂)
-        if ((car.kind === 'M1L' || car.kind === 'M1R') && car.route === 'turnDown'){
-          const turnX = g.road.x;
+        // M1 turning down into stem OUT lanes
+        if ((car.kind === 'M1L' || car.kind === 'M1R') && car.route === 'down'){
+          const turnX = g.road.x; // at stem center
           if ((car.kind==='M1L' && car.x >= turnX) || (car.kind==='M1R' && car.x <= turnX)){
             car.turned = true;
             const sp = Math.abs(car.vx);
-            car.vx = 0; car.vy = sp;
-            car.x = g.road.x; // 中間下行
+            car.vx = 0; car.vy = sp; // go downward (exit)
+            car.x = g.lane.stem_out_x[car.outLane]; // choose one of 2 OUT lanes
             car.w = CAR_H; car.h = CAR_W;
           }
         }
 
-        // 主線2 轉入主線1
-        if (car.kind === 'M2'){
+        // STEM incoming turns into mainline1 at intersection
+        if (car.kind === 'STEM'){
           if (car.y <= g.road.y + 10){
             car.turned = true;
             const sp = Math.abs(car.vy);
             car.vy = 0;
             car.w = CAR_W; car.h = CAR_H;
+
             if (car.route === 'toLeft'){
+              // turn to left (westbound): move left, align to westbound lane
               car.vx = -sp;
               car.y = g.lane.m1_west_y;
             } else {
+              // turn to right (eastbound)
               car.vx = sp;
               car.y = g.lane.m1_east_y;
             }
@@ -609,9 +610,10 @@
       }
     }
 
+    // cleanup
     for (let i=cars.length-1; i>=0; i--){
       const c = cars[i];
-      if (c.x < -240 || c.x > g.W+240 || c.y < -240 || c.y > g.H+240) cars.splice(i,1);
+      if (c.x < -260 || c.x > g.W+260 || c.y < -260 || c.y > g.H+260) cars.splice(i,1);
     }
   }
 
@@ -647,36 +649,66 @@
   function drawRoad(g){
     ctx.clearRect(0,0,g.W,g.H);
 
+    // asphalt
     ctx.fillStyle = 'rgba(255,255,255,0.03)';
     ctx.fillRect(0, g.road.y-g.road.h/2, g.W, g.road.h);
     ctx.fillRect(g.road.x-g.road.w/2, g.road.y, g.road.w, g.H-g.road.y);
 
+    // lane center lines
     ctx.strokeStyle='rgba(255,255,255,0.16)'; ctx.lineWidth=2;
     dashed(0, g.road.y, g.W, g.road.y);
-    dashed(g.road.x, g.road.y, g.road.x, g.H);
 
+    // vertical stem: split into 4 lanes (2 OUT on left, 2 IN on right)
+    ctx.strokeStyle='rgba(255,255,255,0.13)'; ctx.lineWidth=2;
+    // center divider between OUT/IN
+    ctx.beginPath();
+    ctx.moveTo(g.road.x, g.road.y);
+    ctx.lineTo(g.road.x, g.H);
+    ctx.stroke();
+
+    // inner lane separators
+    for (const x of [g.lane.stem_out_x[1], g.lane.stem_in_x[0]]){
+      ctx.beginPath();
+      ctx.moveTo(x, g.road.y+8);
+      ctx.lineTo(x, g.H);
+      ctx.stroke();
+    }
+
+    // edges
     ctx.strokeStyle='rgba(255,255,255,0.10)'; ctx.lineWidth=3;
     ctx.strokeRect(0, g.road.y-g.road.h/2, g.W, g.road.h);
     ctx.strokeRect(g.road.x-g.road.w/2, g.road.y, g.road.w, g.H-g.road.y);
 
+    // zebra crossings (left/right across mainline1; bottom across stem)
     zebra(g.inter.x0 - 55, g.road.y-g.road.h/2 + 8, 42, g.road.h-16, 'vertical');
     zebra(g.inter.x1 + 13, g.road.y-g.road.h/2 + 8, 42, g.road.h-16, 'vertical');
     zebra(g.road.x-g.road.w/2 + 8, g.inter.y1 + 14, g.road.w-16, 42, 'horizontal');
 
-    // stop lines
+    // stop lines:
+    // mainline1 stop lines before intersection
     ctx.strokeStyle='rgba(255,255,255,0.60)'; ctx.lineWidth=4;
-    ctx.beginPath(); ctx.moveTo(g.inter.x0-20, g.road.y+g.road.h/2-6); ctx.lineTo(g.inter.x0-20, g.road.y+6); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(g.inter.x1+20, g.road.y-g.road.h/2+6); ctx.lineTo(g.inter.x1+20, g.road.y-6); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(g.road.x-g.road.w/2+6, g.inter.y1+20); ctx.lineTo(g.road.x+g.road.w/2-6, g.inter.y1+20); ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(g.inter.x0-20, g.road.y+g.road.h/2-6);
+    ctx.lineTo(g.inter.x0-20, g.road.y+6);
+    ctx.stroke();
 
-    // 主線2 四車道輔助線（畫在下方）
-    ctx.strokeStyle='rgba(255,255,255,0.18)'; ctx.lineWidth=2;
-    for (const x of [...g.lane.m2_left_x, ...g.lane.m2_right_x]){
-      ctx.beginPath();
-      ctx.moveTo(x, g.road.y+10);
-      ctx.lineTo(x, g.H);
-      ctx.stroke();
-    }
+    ctx.beginPath();
+    ctx.moveTo(g.inter.x1+20, g.road.y-g.road.h/2+6);
+    ctx.lineTo(g.inter.x1+20, g.road.y-6);
+    ctx.stroke();
+
+    // stem incoming stop line (only for IN lanes on right half)
+    ctx.beginPath();
+    ctx.moveTo(g.road.x+6, g.inter.y1+20);
+    ctx.lineTo(g.road.x+g.road.w/2-6, g.inter.y1+20);
+    ctx.stroke();
+
+    // labels
+    ctx.fillStyle = 'rgba(232,238,252,0.75)';
+    ctx.font = '12px ui-monospace, Menlo, Consolas, monospace';
+    ctx.fillText('主線1 左來 →', 18, g.road.y + 58);
+    ctx.fillText('← 主線1 右來', g.W-118, g.road.y - 48);
+    ctx.fillText('主線2：左側2線(出口往下) / 右側2線(進口往上)', g.road.x - 168, g.H-18);
   }
 
   function lamp(onCol, on){ return on ? onCol : 'rgba(255,255,255,0.12)'; }
@@ -732,37 +764,25 @@
   }
 
   function drawSignals(sig, g){
-    // 主線1
+    // Mainline1 straight (two heads near stop lines)
     draw3Lamp(g.inter.x0-34, g.road.y+g.road.h/2-30, sig.m1);
     draw3Lamp(g.inter.x1+34, g.road.y-g.road.h/2+30, sig.m1);
 
-    // 主線1 轉入主線2
-    drawTurnLamp(g.road.x-60, g.road.y+8, sig.m1t, '↘');
-    drawTurnLamp(g.road.x+60, g.road.y-8, sig.m1t, '↙');
+    // Mainline1 turn-down into stem (two heads near intersection center)
+    drawTurnLamp(g.road.x-60, g.road.y+8, sig.m1t, '↓');
+    drawTurnLamp(g.road.x+60, g.road.y-8, sig.m1t, '↓');
 
-    // 主線2 左/右
-    drawTurnLamp(g.road.x-18, g.inter.y1+60, sig.m2l, '←');
-    drawTurnLamp(g.road.x+18, g.inter.y1+60, sig.m2r, '→');
+    // Stem incoming (right side) left/right turn arrows
+    drawTurnLamp(g.road.x+48, g.inter.y1+58, sig.sl, '←'); // left turn from stem
+    drawTurnLamp(g.road.x+20, g.inter.y1+58, sig.sr, '→'); // right turn from stem
 
-    // 倒數
+    // Countdown
     drawCountdown(g.road.x - 34, g.road.y - 60, remaining);
 
-    // 行人
+    // Ped heads
     drawPedHead(g.inter.x0 - 65, g.road.y - 70, sig.pedLeft);
     drawPedHead(g.inter.x1 + 65, g.road.y + 70, sig.pedRight);
     drawPedHead(g.road.x - 95, g.inter.y1 + 70, sig.pedBottom);
-
-    // 尖峰 active lane 提示（只提示當下群內 lane）
-    if (ui.peak.checked && (phase === PH.M2_L_G || phase === PH.M2_R_G)){
-      const isLeft = (phase === PH.M2_L_G);
-      const x = isLeft ? g.lane.m2_left_x[m2ActiveLaneInGroup] : g.lane.m2_right_x[m2ActiveLaneInGroup];
-      ctx.save();
-      ctx.fillStyle='rgba(255,255,255,0.85)';
-      ctx.font='12px ui-monospace, Menlo, Consolas, monospace';
-      const tag = isLeft ? `L${m2ActiveLaneInGroup+1}` : `R${m2ActiveLaneInGroup+1}`;
-      ctx.fillText(`ACTIVE ${tag}`, x-34, g.road.y+120);
-      ctx.restore();
-    }
   }
 
   function drawCars(){
@@ -770,6 +790,7 @@
       ctx.save();
       ctx.translate(car.x, car.y);
 
+      // orient by velocity
       if (Math.abs(car.vx) > Math.abs(car.vy)){
         if (car.vx < 0) ctx.rotate(Math.PI);
       } else {
@@ -777,16 +798,11 @@
         else if (car.vy > 0) ctx.rotate(Math.PI/2);
       }
 
-      // 用不同色系區分主線2 左/右群 & lane
-      if (car.kind === 'M2'){
-        if (car.route === 'toLeft'){
-          ctx.fillStyle = (car.groupLane === 0) ? 'rgba(120,200,255,0.95)' : 'rgba(100,240,200,0.95)';
-        } else {
-          ctx.fillStyle = (car.groupLane === 0) ? 'rgba(170,160,255,0.95)' : 'rgba(230,190,255,0.95)';
-        }
-      } else {
-        ctx.fillStyle = 'rgba(120,200,255,0.95)';
-      }
+      // color by kind
+      if (car.kind === 'STEM') ctx.fillStyle = 'rgba(170,160,255,0.95)';
+      else if (car.route === 'down') ctx.fillStyle = 'rgba(100,240,200,0.95)';
+      else ctx.fillStyle = 'rgba(120,200,255,0.95)';
+
       ctx.fillRect(-car.w/2, -car.h/2, car.w, car.h);
 
       ctx.fillStyle='rgba(0,0,0,0.35)';
@@ -809,10 +825,10 @@
       case PH.M1_Y: return ['主線1 直行黃（M1_Y）','yellow'];
       case PH.M1_T_G: return ['主線1 轉入主線2 綠（M1_T_G）','green'];
       case PH.M1_T_Y: return ['主線1 轉入主線2 黃（M1_T_Y）','yellow'];
-      case PH.M2_L_G: return ['主線2 左轉綠（M2_L_G）','green'];
-      case PH.M2_L_Y: return ['主線2 左轉黃（M2_L_Y）','yellow'];
-      case PH.M2_R_G: return ['主線2 右轉綠（M2_R_G）','green'];
-      case PH.M2_R_Y: return ['主線2 右轉黃（M2_R_Y）','yellow'];
+      case PH.S_L_G: return ['主線2 進口左轉綠（S_L_G）','green'];
+      case PH.S_L_Y: return ['主線2 進口左轉黃（S_L_Y）','yellow'];
+      case PH.S_R_G: return ['主線2 進口右轉綠（S_R_G）','green'];
+      case PH.S_R_Y: return ['主線2 進口右轉黃（S_R_Y）','yellow'];
       default: return ['全紅緩衝（AR）','red'];
     }
   }
@@ -824,14 +840,8 @@
 
     ui.sigM1.textContent = sig.m1;
     ui.sigM1T.textContent = sig.m1t;
-    ui.sigM2L.textContent = sig.m2l;
-    ui.sigM2R.textContent = sig.m2r;
-
-    if (!ui.peak.checked) ui.laneInfo.textContent = '離峰：同向2線同放';
-    else if (phase === PH.M2_L_G) ui.laneInfo.textContent = `尖峰：左轉放 L${m2ActiveLaneInGroup+1}`;
-    else if (phase === PH.M2_R_G) ui.laneInfo.textContent = `尖峰：右轉放 R${m2ActiveLaneInGroup+1}`;
-    else ui.laneInfo.textContent = '—';
-
+    ui.sigSL.textContent = sig.sl;
+    ui.sigSR.textContent = sig.sr;
     ui.sigPed.textContent = `L:${sig.pedLeft} R:${sig.pedRight} B:${sig.pedBottom}`;
     ui.count.textContent = remaining;
   }
@@ -848,20 +858,10 @@
     } else {
       remaining = Math.min(remaining, durationForPhase(phase));
     }
-
-    if (!ui.peak.checked) {
-      if (phase === PH.M2_L_G || phase === PH.M2_R_G) m2ActiveLaneInGroup = -1;
-    } else {
-      if (phase === PH.M2_L_G || phase === PH.M2_R_G){
-        if (m2PhaseTotal <= 0) m2PhaseTotal = remaining;
-        m2ActiveLaneInGroup = 0;
-      }
-    }
   }
 
   for (const el of [
-    ui.peak,
-    ui.tM1G,ui.tM1Y,ui.tM1TG,ui.tM1TY,ui.tM2LG,ui.tM2LY,ui.tM2RG,ui.tM2RY,ui.tAR,
+    ui.tM1G,ui.tM1Y,ui.tM1TG,ui.tM1TY,ui.tSLG,ui.tSLY,ui.tSRG,ui.tSRY,ui.tAR,
     ui.pLeftOn,ui.pRightOn,ui.pBottomOn,ui.pLeftWalk,ui.pLeftClr,ui.pRightWalk,ui.pRightClr,ui.pBottomWalk,ui.pBottomClr
   ]) el.addEventListener('change', softApply);
 
@@ -873,7 +873,6 @@
   ui.reset.addEventListener('click', () => {
     cars.length = 0;
     pedSteps = buildPedSteps(); pedIndex = 0;
-    m2ActiveLaneInGroup = -1; m2PhaseTotal = 0;
     enterPhase(PH.M1_G);
   });
 
@@ -900,6 +899,7 @@
     requestAnimationFrame(step);
   }
 
+  // start
   pedSteps = buildPedSteps();
   pedIndex = 0;
   enterPhase(PH.M1_G);
