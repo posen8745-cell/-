@@ -70,7 +70,7 @@
     .divider{ height:1px; background: rgba(255,255,255,0.10); margin: 12px 0; }
     .row{ display:flex; gap:10px; align-items:center; justify-content:space-between; margin:10px 0; }
     label{ font-size: 13px; color: var(--muted); }
-    input[type="number"], select{
+    input[type="number"]{
       width: 190px;
       padding: 8px 10px;
       border-radius: 10px;
@@ -91,6 +91,7 @@
       font-weight: 600;
     }
     button:hover{filter:brightness(1.08)}
+    button:disabled{opacity:.55; cursor:not-allowed; filter:none}
     .kv{
       display:grid;
       grid-template-columns: 1fr auto;
@@ -137,6 +138,30 @@
       border-radius: 6px;
       border: 1px solid rgba(255,255,255,0.10);
     }
+
+    /* ✅ 早上/晚上按鈕 */
+    .modeBtns{
+      display:flex;
+      gap:10px;
+      margin-top: 6px;
+    }
+    .modeBtn{
+      flex:1;
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.14);
+      background: rgba(0,0,0,0.18);
+      color: var(--text);
+      cursor:pointer;
+      font-weight: 800;
+      letter-spacing: .6px;
+    }
+    .modeBtn.active{
+      border-color: rgba(60,255,140,0.65);
+      box-shadow: 0 0 0 2px rgba(60,255,140,0.20) inset;
+      background: linear-gradient(180deg, rgba(60,255,140,0.18), rgba(0,0,0,0.10));
+    }
+    .modeBtn:disabled{opacity:.55; cursor:not-allowed; box-shadow:none}
   </style>
 </head>
 <body>
@@ -166,6 +191,15 @@
       </div>
       <div class="tiny" id="autoHint" style="margin-top:-6px;">
         Auto：觀察停止線前排隊數，在每輪開始決定 AM/MID/PM2（含滯後避免抖動）
+      </div>
+
+      <!-- ✅ 早上 / 晚上 兩個按鈕 -->
+      <div class="modeBtns">
+        <button class="modeBtn" id="btnMorning">早上</button>
+        <button class="modeBtn" id="btnEvening">晚上</button>
+      </div>
+      <div class="tiny" id="manualHint" style="margin-top:6px;">
+        手動：按下「早上/晚上」會直接套用（並自動關掉 Auto）。
       </div>
 
       <div class="divider"></div>
@@ -235,11 +269,11 @@
         </div>
 
         <div class="note">
-          ✅ 自動模式會在每輪開始依排隊切：<br/>
-          - 主1左轉隊列最大 → AM（左轉優先）<br/>
-          - 主2「右轉」隊列最大 → PM2（主2優先）<br/>
+          ✅ Auto 會依排隊判斷：<br/>
+          - 右主線左轉隊列最大 → AM（早上）<br/>
+          - 主2右轉隊列最大 → PM2（晚上）<br/>
           - 其他 → MID（均衡）<br/><br/>
-          ※ 此版會固定維持「下方斑馬線 WALK 20 / CLEAR 8」避免 autoMode 把你改回去。
+          ※ 此版會固定維持行人設定避免被 autoMode 改走。
         </div>
       </div>
 
@@ -280,6 +314,10 @@
     autoMode: $('autoMode'),
     autoHint: $('autoHint'),
     qText: $('qText'),
+
+    btnMorning: $('btnMorning'),
+    btnEvening: $('btnEvening'),
+    manualHint: $('manualHint'),
 
     toggle: $('toggle'), reset: $('reset'),
 
@@ -417,10 +455,10 @@
 
   // ===== Phases =====
   const PH = {
-    M1S_G:'M1S_G', // 主線1 直行綠（只放直行）
+    M1S_G:'M1S_G',
     M1S_Y:'M1S_Y',
     AR1:'AR1',
-    M1T_G:'M1T_G', // 主線1 轉彎綠（半重疊：也放直行）
+    M1T_G:'M1T_G',
     M1T_Y:'M1T_Y',
     AR1B:'AR1B',
 
@@ -537,9 +575,9 @@
 
   function pastStop(car, g){
     const s = stopLine(car, g);
-    if (car.kind === 'M1L') return car.x > s;  // 往右
-    if (car.kind === 'M1R') return car.x < s;  // 往左
-    return car.y < s;                          // M2 往上
+    if (car.kind === 'M1L') return car.x > s;
+    if (car.kind === 'M1R') return car.x < s;
+    return car.y < s;
   }
 
   function approachingStop(car, g){
@@ -565,235 +603,40 @@
     return true;
   }
 
-function spawnCar(g){
-  const p = Number(ui.spawn.value);
-  if (Math.random() > p) return;
-
-  const sp = rnd(95, 145);
-
-  // ✅ 需求排序：
-  // 1) 主1右側來車 M1R 左轉(=down)最多
-  // 2) 主2 M2 右轉(toRight)第二多
-  // 3) 主1左側來車 M1L 最少
-  //
-  // 三股總比例（可微調，但先用這組很穩）：
-  // - M1R: 55%
-  // - M2 : 35%
-  // - M1L: 10%
-  const r = Math.random();
-
-  if (r < 0.10){
-    // --- M1L 最少（左邊來車） ---
-    // 左來：少量右轉(往下)；其餘直行
-    const turnDown = (Math.random() < 0.20);
-    cars.push({
-      kind:'M1L',
-      route: turnDown ? 'down' : 'straight',
-      x: -80,
-      y: g.lane.m1_east_y,
-      vx: sp, vy: 0,
-      w: CAR_W, h: CAR_H,
-      turned: false,
-    });
-
-  } else if (r < 0.65){
-    // --- M1R 最高（右邊來車） ---
-    // 右來：左轉(往下)最多
-    const turnDown = (Math.random() < 0.80); // ✅ 右側左轉超高
-    cars.push({
-      kind:'M1R',
-      route: turnDown ? 'down' : 'straight',
-      x: g.W + 80,
-      y: g.lane.m1_west_y,
-      vx: -sp, vy: 0,
-      w: CAR_W, h: CAR_H,
-      turned: false,
-    });
-
-  } else {
-    // --- M2 第二高（下方來車） ---
-    // M2：右轉(toRight)偏多
-    const laneIdx = (Math.random() < 0.65) ? 1 : 0; // lane1 右轉專用，給多一點
-    const route = (laneIdx === 1) ? 'toRight' : 'toLeft';
-    cars.push({
-      kind:'M2',
-      laneIdx,
-      route,
-      x: g.lane.stem_in_x[laneIdx],
-      y: g.H + 90,
-      vx: 0, vy: -sp,
-      w: CAR_H, h: CAR_W,
-      turned: false,
-    });
-  }
-}
-
-
-  function allowedBySignal(car, sig, g){
-    if (phase === PH.PSEQ){
-      return pedAllowsCar(car, sig);
-    }
-    // ✅ 同放：主2 綠燈時，允許主1（右來）左轉往下同時通行
-// 主2 右轉(toRight)本來就會在 M2_G 放行，所以這樣就達成「主1左轉 + 主2右轉」同時
-if (phase === PH.M2_G){
-  if (car.kind === 'M1R' && car.route === 'down'){
-    return true;
-  }
-}
-    // 主線1
-    if (car.kind === 'M1L' || car.kind === 'M1R'){
-      if (sig.m1 === SIG.YELLOW) return pastStop(car, g);
-      if (sig.m1 !== SIG.GREEN) return false;
-
-      if (phase === PH.M1S_G){
-        if (pastStop(car, g)) return true;
-        return car.route === 'straight';
-      }
-      if (phase === PH.M1T_G){
-        if (pastStop(car, g)) return true;
-        // ✅ 半重疊：轉彎綠時，直行也可以走
-        return (car.route === 'down' || car.route === 'straight');
-      }
-      return false;
-    }
-
-    // 主線2
-    if (car.kind === 'M2'){
-      if (sig.m2 === SIG.GREEN) return true;
-      if (sig.m2 === SIG.YELLOW) return pastStop(car, g);
-      return false;
-    }
-
-    return false;
-  }
-
-  // ===== 排隊跟車（用沿行進方向座標 s）=====
-  const SAFE_GAP = 10; // px
-
-  function laneKey(car){
-    if (car.kind === 'M1L') return 'M1L';
-    if (car.kind === 'M1R') return 'M1R';
-    if (car.kind === 'M2')  return `M2_${car.laneIdx}`;
-    return null;
-  }
-
-  function sCoord(car){
-    if (car.kind === 'M1L') return car.x;     // 往右
-    if (car.kind === 'M1R') return -car.x;    // 往左
-    if (car.kind === 'M2')  return -car.y;    // 往上
-    return 0;
-  }
-
-  function lenAlong(car){
-    if (car.kind === 'M2') return car.h;      // 往上：h 是沿行進方向
-    return car.w;                             // 往左/右：w 是沿行進方向
-  }
-
-  function frontS(car){ return sCoord(car) + lenAlong(car)/2; }
-  function backS(car){  return sCoord(car) - lenAlong(car)/2; }
-
-  function updateCars(dt, sig, g){
-    // ✅ CLEAR 不降速（避免行人清空期拖垮車流）
-    const slowFactor = 1.0;
-
-    // 1) 先算「燈號/停止線」是否要停
-    for (const car of cars){
-      car.__needStop =
-        approachingStop(car, g) &&
-        !pastStop(car, g) &&
-        !allowedBySignal(car, sig, g);
-    }
-
-    // 2) 同車道排隊：後車不得貼近前車
-    const lanes = new Map();
-    for (const car of cars){
-      const key = laneKey(car);
-      if (!key) continue;
-
-      // 只管仍沿原方向行進者
-      if ((car.kind === 'M1L' || car.kind === 'M1R') && Math.abs(car.vx) <= 0.0001) continue;
-      if (car.kind === 'M2' && Math.abs(car.vy) <= 0.0001) continue;
-
-      if (!lanes.has(key)) lanes.set(key, []);
-      lanes.get(key).push(car);
-    }
-
-    for (const arr of lanes.values()){
-      arr.sort((a,b) => sCoord(b) - sCoord(a)); // s 大在前
-      for (let i=1; i<arr.length; i++){
-        const leader = arr[i-1];
-        const follower = arr[i];
-        const gap = backS(leader) - frontS(follower);
-        if (gap < SAFE_GAP){
-          follower.__needStop = true; // 就算綠燈也不能穿
-        }
-      }
-    }
-
-    // 3) 移動
-    for (const car of cars){
-      if (!car.__needStop){
-        car.x += car.vx * dt * slowFactor;
-        car.y += car.vy * dt * slowFactor;
-      }
-
-      // 4) 轉彎行為
-      if (!car.turned){
-        // 主線1 往下轉
-        if ((car.kind === 'M1L' || car.kind === 'M1R') && car.route === 'down'){
-          const turnX = g.road.x;
-          if ((car.kind==='M1L' && car.x >= turnX) || (car.kind==='M1R' && car.x <= turnX)){
-            car.turned = true;
-            const sp = Math.abs(car.vx);
-            car.vx = 0; car.vy = sp;
-            car.x = g.lane.stem_out_x[0];
-            car.w = CAR_H; car.h = CAR_W;
-          }
-        }
-
-        // 主線2 轉入主線1（轉入後改 kind 才會進主線1 排隊）
-        if (car.kind === 'M2'){
-          if (car.y <= g.road.y + 10){
-            car.turned = true;
-            const sp = Math.abs(car.vy);
-            car.vy = 0;
-            car.w = CAR_W; car.h = CAR_H;
-
-            if (car.route === 'toLeft'){
-              car.kind = 'M1R';        // 往左走
-              car.route = 'straight';
-              car.vx = -sp;
-              car.y = g.lane.m1_west_y;
-            } else {
-              car.kind = 'M1L';        // 往右走
-              car.route = 'straight';
-              car.vx = sp;
-              car.y = g.lane.m1_east_y;
-            }
-          }
-        }
-      }
-    }
-
-    // 5) cleanup
-    for (let i=cars.length-1; i>=0; i--){
-      const c = cars[i];
-      if (c.x < -320 || c.x > g.W+320 || c.y < -320 || c.y > g.H+320) cars.splice(i,1);
-    }
-  }
-
-  // ===== Auto Mode (queue-based, includes M2 right-turn queue) =====
-  // ✅ 固定維持下方斑馬線 WALK 20 / CLEAR 8；左右 WALK 10 / CLEAR 6
+  // ===== Auto Mode + 手動早晚按鈕 =====
   const MODES = {
-    AM:  { name:'早高峰（主1左轉偏多）', M1_SG: 20, M1_TG: 28, M2_G: 25, spawn: 0.22 },
-    MID: { name:'平峰（均衡）',         M1_SG: 25, M1_TG: 20, M2_G: 35, spawn: 0.20 },
-    PM2: { name:'晚高峰（主2右轉偏多）', M1_SG: 18, M1_TG: 14, M2_G: 50, spawn: 0.22 },
+    // ✅ 綠燈更長（你說車行時間過短）
+    AM:  { name:'早上（右主線左轉40% / 主2右轉30%）', M1_SG: 22, M1_TG: 40, M2_G: 34, spawn: 0.22 },
+    MID: { name:'平峰（均衡）',                         M1_SG: 26, M1_TG: 28, M2_G: 38, spawn: 0.20 },
+    PM2: { name:'晚上（主2右轉40% / 右主線左轉30%）',   M1_SG: 20, M1_TG: 28, M2_G: 55, spawn: 0.22 },
   };
 
   let currentAutoMode = 'MID';
   let modeHoldSec = 0;
-  const MIN_HOLD_SEC = 60;   // 至少維持 60 秒才允許換
-  const SWITCH_MARGIN = 3;   // 領先至少 3 台才換
+  const MIN_HOLD_SEC = 60;
+  const SWITCH_MARGIN = 3;
+
+  function setButtonActive(modeKey){
+    if (!ui.btnMorning || !ui.btnEvening) return;
+    ui.btnMorning.classList.toggle('active', modeKey === 'AM');
+    ui.btnEvening.classList.toggle('active', modeKey === 'PM2');
+    // MID 時兩顆都不亮（表示不是手動早/晚）
+    if (modeKey === 'MID'){
+      ui.btnMorning.classList.remove('active');
+      ui.btnEvening.classList.remove('active');
+    }
+  }
+
+  function syncModeControls(){
+    const autoOn = !!ui.autoMode?.checked;
+    if (ui.btnMorning) ui.btnMorning.disabled = autoOn;
+    if (ui.btnEvening) ui.btnEvening.disabled = autoOn;
+    if (ui.manualHint){
+      ui.manualHint.textContent = autoOn
+        ? '手動：Auto 開啟中（早上/晚上按鈕已鎖定）'
+        : '手動：按下「早上/晚上」會直接套用（並自動關掉 Auto）。';
+    }
+  }
 
   function applyMode(modeKey){
     const m = MODES[modeKey];
@@ -804,7 +647,7 @@ if (phase === PH.M2_G){
     ui.tM2G.value  = m.M2_G;
     ui.spawn.value = m.spawn;
 
-    // ✅ 行人固定配置（你指定的）
+    // ✅ 行人固定配置（維持你原本設定）
     ui.pLeftOn.checked = true;
     ui.pLeftWalk.value = 10;
     ui.pLeftClr.value  = 6;
@@ -821,6 +664,8 @@ if (phase === PH.M2_G){
 
     currentAutoMode = modeKey;
     modeHoldSec = 0;
+
+    setButtonActive(modeKey);
 
     if (ui.autoHint) ui.autoHint.textContent = `Auto：目前模式 ${modeKey}｜${m.name}`;
   }
@@ -859,10 +704,225 @@ if (phase === PH.M2_G){
 
   function chooseModeByQueues(q){
     const { m1TurnQ, m1StraightQ, m2Q, m2RightQ } = q;
-
     if (m2RightQ >= Math.max(m1TurnQ, m1StraightQ) + SWITCH_MARGIN) return 'PM2';
     if (m1TurnQ >= Math.max(m2Q, m1StraightQ) + SWITCH_MARGIN) return 'AM';
     return 'MID';
+  }
+
+  function spawnCar(g){
+    const p = Number(ui.spawn.value);
+    if (Math.random() > p) return;
+
+    const sp = rnd(95, 145);
+
+    // ✅ 依「目前模式」套用你的早晚比例（其餘流量自動分到其他車流）
+    let base = { m1rLeft: 0.35, m2Right: 0.35, others: 0.30 };
+    if (currentAutoMode === 'AM')  base = { m1rLeft: 0.40, m2Right: 0.30, others: 0.30 };
+    if (currentAutoMode === 'PM2') base = { m1rLeft: 0.30, m2Right: 0.40, others: 0.30 };
+
+    const r = Math.random();
+
+    // 1) 右主線左轉（M1R down）
+    if (r < base.m1rLeft){
+      cars.push({
+        kind:'M1R',
+        route:'down',
+        x: g.W + 80,
+        y: g.lane.m1_west_y,
+        vx: -sp, vy: 0,
+        w: CAR_W, h: CAR_H,
+        turned: false,
+      });
+      return;
+    }
+
+    // 2) 主2右轉（M2 toRight，右轉 lane）
+    if (r < base.m1rLeft + base.m2Right){
+      cars.push({
+        kind:'M2',
+        laneIdx: 1,
+        route: 'toRight',
+        x: g.lane.stem_in_x[1],
+        y: g.H + 90,
+        vx: 0, vy: -sp,
+        w: CAR_H, h: CAR_W,
+        turned: false,
+      });
+      return;
+    }
+
+    // 3) others：右主線直行 / 主2左轉 / 左主線少量
+    const rr = Math.random();
+    if (rr < 0.50){
+      cars.push({
+        kind:'M1R',
+        route:'straight',
+        x: g.W + 80,
+        y: g.lane.m1_west_y,
+        vx: -sp, vy: 0,
+        w: CAR_W, h: CAR_H,
+        turned: false,
+      });
+    } else if (rr < 0.85){
+      cars.push({
+        kind:'M2',
+        laneIdx: 0,
+        route: 'toLeft',
+        x: g.lane.stem_in_x[0],
+        y: g.H + 90,
+        vx: 0, vy: -sp,
+        w: CAR_H, h: CAR_W,
+        turned: false,
+      });
+    } else {
+      const turnDown = (Math.random() < 0.20);
+      cars.push({
+        kind:'M1L',
+        route: turnDown ? 'down' : 'straight',
+        x: -80,
+        y: g.lane.m1_east_y,
+        vx: sp, vy: 0,
+        w: CAR_W, h: CAR_H,
+        turned: false,
+      });
+    }
+  }
+
+  function allowedBySignal(car, sig, g){
+    if (phase === PH.PSEQ){
+      return pedAllowsCar(car, sig);
+    }
+
+    // 主線1
+    if (car.kind === 'M1L' || car.kind === 'M1R'){
+      if (sig.m1 === SIG.YELLOW) return pastStop(car, g);
+      if (sig.m1 !== SIG.GREEN) return false;
+
+      if (phase === PH.M1S_G){
+        if (pastStop(car, g)) return true;
+        return car.route === 'straight';
+      }
+      if (phase === PH.M1T_G){
+        if (pastStop(car, g)) return true;
+        return (car.route === 'down' || car.route === 'straight');
+      }
+      return false;
+    }
+
+    // 主線2
+    if (car.kind === 'M2'){
+      if (sig.m2 === SIG.GREEN) return true;
+      if (sig.m2 === SIG.YELLOW) return pastStop(car, g);
+      return false;
+    }
+
+    return false;
+  }
+
+  // ===== 排隊跟車 =====
+  const SAFE_GAP = 10;
+
+  function laneKey(car){
+    if (car.kind === 'M1L') return 'M1L';
+    if (car.kind === 'M1R') return 'M1R';
+    if (car.kind === 'M2')  return `M2_${car.laneIdx}`;
+    return null;
+  }
+
+  function sCoord(car){
+    if (car.kind === 'M1L') return car.x;
+    if (car.kind === 'M1R') return -car.x;
+    if (car.kind === 'M2')  return -car.y;
+    return 0;
+  }
+
+  function lenAlong(car){
+    if (car.kind === 'M2') return car.h;
+    return car.w;
+  }
+
+  function frontS(car){ return sCoord(car) + lenAlong(car)/2; }
+  function backS(car){  return sCoord(car) - lenAlong(car)/2; }
+
+  function updateCars(dt, sig, g){
+    const slowFactor = 1.0;
+
+    for (const car of cars){
+      car.__needStop =
+        approachingStop(car, g) &&
+        !pastStop(car, g) &&
+        !allowedBySignal(car, sig, g);
+    }
+
+    const lanes = new Map();
+    for (const car of cars){
+      const key = laneKey(car);
+      if (!key) continue;
+
+      if ((car.kind === 'M1L' || car.kind === 'M1R') && Math.abs(car.vx) <= 0.0001) continue;
+      if (car.kind === 'M2' && Math.abs(car.vy) <= 0.0001) continue;
+
+      if (!lanes.has(key)) lanes.set(key, []);
+      lanes.get(key).push(car);
+    }
+
+    for (const arr of lanes.values()){
+      arr.sort((a,b) => sCoord(b) - sCoord(a));
+      for (let i=1; i<arr.length; i++){
+        const leader = arr[i-1];
+        const follower = arr[i];
+        const gap = backS(leader) - frontS(follower);
+        if (gap < SAFE_GAP){
+          follower.__needStop = true;
+        }
+      }
+    }
+
+    for (const car of cars){
+      if (!car.__needStop){
+        car.x += car.vx * dt * slowFactor;
+        car.y += car.vy * dt * slowFactor;
+      }
+
+      if (!car.turned){
+        if ((car.kind === 'M1L' || car.kind === 'M1R') && car.route === 'down'){
+          const turnX = g.road.x;
+          if ((car.kind==='M1L' && car.x >= turnX) || (car.kind==='M1R' && car.x <= turnX)){
+            car.turned = true;
+            const sp = Math.abs(car.vx);
+            car.vx = 0; car.vy = sp;
+            car.x = g.lane.stem_out_x[0];
+            car.w = CAR_H; car.h = CAR_W;
+          }
+        }
+
+        if (car.kind === 'M2'){
+          if (car.y <= g.road.y + 10){
+            car.turned = true;
+            const sp = Math.abs(car.vy);
+            car.vy = 0;
+            car.w = CAR_W; car.h = CAR_H;
+
+            if (car.route === 'toLeft'){
+              car.kind = 'M1R';
+              car.route = 'straight';
+              car.vx = -sp;
+              car.y = g.lane.m1_west_y;
+            } else {
+              car.kind = 'M1L';
+              car.route = 'straight';
+              car.vx = sp;
+              car.y = g.lane.m1_east_y;
+            }
+          }
+        }
+      }
+    }
+
+    for (let i=cars.length-1; i>=0; i--){
+      const c = cars[i];
+      if (c.x < -320 || c.x > g.W+320 || c.y < -320 || c.y > g.H+320) cars.splice(i,1);
+    }
   }
 
   // ===== Timing tick =====
@@ -883,10 +943,8 @@ if (phase === PH.M2_G){
     const nxt = nextPhase(phase);
     enterPhase(nxt);
 
-    // Auto: accumulate hold time
     modeHoldSec += 1;
 
-    // ✅ 每輪起點：進入 M1S_G 時決策（避免每秒跳）
     if (ui.autoMode?.checked && phase === PH.M1S_G && modeHoldSec >= MIN_HOLD_SEC){
       const g = geom();
       const q = measureQueues(g);
@@ -976,7 +1034,7 @@ if (phase === PH.M2_G){
     ctx.font = '12px ui-monospace, Menlo, Consolas, monospace';
     ctx.fillText('主線1（左來）單線：直行/右轉(往下)（半重疊＋排隊）', 14, g.road.y + 60);
     ctx.fillText('主線1（右來）單線：直行/左轉(往下)（半重疊＋排隊）', g.W-420, g.road.y - 52);
-    ctx.fillText('主線2（下方進口）左右轉同時（含右轉隊列偵測）', g.road.x - 170, g.H-18);
+    ctx.fillText('主線2（下方進口）左右轉同時（右轉偏多）', g.road.x - 150, g.H-18);
   }
 
   function lamp(onCol, on){ return on ? onCol : 'rgba(255,255,255,0.12)'; }
@@ -1117,7 +1175,7 @@ if (phase === PH.M2_G){
   let acc = 0;
   let last = performance.now();
 
-  // ✅ spawn 每秒制：避免跟 FPS 綁定造成爆流
+  // ✅ spawn 每秒制
   let spawnAcc = 0;
 
   function softApply(){
@@ -1133,7 +1191,7 @@ if (phase === PH.M2_G){
   function applyConfigAndNormalize(cfg){
     applyConfigToUI(cfg);
 
-    // ✅ 覆蓋成你要的行人秒數（避免 config 把值改走）
+    // ✅ 依你原本固定行人
     ui.pLeftOn.checked = true;  ui.pLeftWalk.value = 10; ui.pLeftClr.value = 6;
     ui.pRightOn.checked = true; ui.pRightWalk.value = 10; ui.pRightClr.value = 6;
     ui.pBottomOn.checked = true;ui.pBottomWalk.value = 20;ui.pBottomClr.value = 8;
@@ -1147,6 +1205,27 @@ if (phase === PH.M2_G){
     ui.pLeftWalk,ui.pLeftClr,ui.pRightWalk,ui.pRightClr,ui.pBottomWalk,ui.pBottomClr,
     ui.autoMode
   ]) el.addEventListener('change', softApply);
+
+  ui.autoMode?.addEventListener('change', () => {
+    // Auto 打開時：把按鈕鎖住
+    if (ui.autoMode.checked){
+      // 讓 Auto 狀態下也能看得出目前模式（若是 MID 兩顆不亮也正常）
+      setButtonActive(currentAutoMode);
+    }
+    syncModeControls();
+  });
+
+  // ✅ 手動按鈕：按下就套用、並關掉 Auto
+  ui.btnMorning?.addEventListener('click', () => {
+    ui.autoMode.checked = false;
+    applyMode('AM');
+    syncModeControls();
+  });
+  ui.btnEvening?.addEventListener('click', () => {
+    ui.autoMode.checked = false;
+    applyMode('PM2');
+    syncModeControls();
+  });
 
   ui.toggle.addEventListener('click', () => {
     running = !running;
@@ -1171,7 +1250,6 @@ if (phase === PH.M2_G){
       acc += dt;
       while (acc >= 1){ acc -= 1; tick1s(); }
 
-      // ✅ 每秒只嘗試一次 spawnCar（spawnCar 內部仍會用 ui.spawn.value 當機率）
       spawnAcc += dt;
       while (spawnAcc >= 1){
         spawnAcc -= 1;
@@ -1199,7 +1277,7 @@ if (phase === PH.M2_G){
       console.warn('⚠️ Using default UI values (config not loaded):', e);
     }
 
-    // ✅ 行人固定：左右10、下方20（再保險一次）
+    // ✅ 行人固定（再保險一次）
     ui.pLeftOn.checked = true;  ui.pLeftWalk.value = 10; ui.pLeftClr.value = 6;
     ui.pRightOn.checked = true; ui.pRightWalk.value = 10; ui.pRightClr.value = 6;
     ui.pBottomOn.checked = true;ui.pBottomWalk.value = 20;ui.pBottomClr.value = 8;
@@ -1207,10 +1285,11 @@ if (phase === PH.M2_G){
     pedSteps = buildPedSteps();
     pedIndex = 0;
 
-    // ✅ 預設先套平峰（你也可改成 AM / PM2）
+    // ✅ 預設先套平峰（MID）
     applyMode('MID');
 
     enterPhase(PH.M1S_G);
+    syncModeControls();
     requestAnimationFrame(step);
     window.addEventListener('resize', () => resizeCanvasToCSS());
   })();
